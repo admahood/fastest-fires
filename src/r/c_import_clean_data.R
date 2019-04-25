@@ -11,6 +11,22 @@ if (!exists("states")){
     rename_all(tolower)
 }
 
+# 50k Fishnet
+if (!exists("fishnet_50k")) {
+  if (!file.exists(file.path(fishnet_dir, "fishnet_50k.gpkg"))) {
+    fishnet_50k <- sf::st_make_grid(states, cellsize = 50000, what = 'polygons') %>%
+      sf::st_sf('geometry' = ., data.frame('fishid50k' = 1:length(.))) %>%
+      sf::st_intersection(., st_union(states))
+    
+    sf::st_write(fishnet_50k,
+                 file.path(fishnet_dir, "fishnet_50k.gpkg"),
+                 driver = "GPKG")
+
+  } else {
+    fishnet_50k <- sf::st_read(file.path(fishnet_dir, "fishnet_50k.gpkg"))
+  }
+}
+
 # Download and import the Level 3 Ecoregions data, which has Levels 3, 2, 1
 # Download will only happen once as long as the file exists
 if (!exists("ecoregions_l321")) {
@@ -51,23 +67,23 @@ if (!exists("ecoregions_l321")) {
 # Import and clean the MTBS polygons
 if (!exists('mtbs_fire')) {
   
-  mtbs_shp <- file.path(mtbs_prefix, 'mtbs_perimeter_data_v2','dissolve_mtbs_perims_1984-2015_DD_20170501.shp')
+  mtbs_shp <- file.path(mtbs_raw, 'mtbs_perimeter_data')
   if (!file.exists(mtbs_shp)) {
-    file.download(file.path(mtbs_prefix, 'mtbs_perimeter_data_v2','dissolve_mtbs_perims_1984-2015_DD_20170501.shp'),
-                  mtbs_prefix, "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/MTBS_Fire/data/composite_data/burned_area_extent_shapefile/mtbs_perimeter_data.zip")
+    file_download(file.path(mtbs_raw, 'mtbs_perimeter_data','mtbs_perims_DD.shp'),
+                  mtbs_raw, "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/MTBS_Fire/data/composite_data/burned_area_extent_shapefile/mtbs_perimeter_data.zip")
     
   }
   
-  mtbs_fire <- st_read(dsn = file.path(mtbs_prefix, 'mtbs_perimeter_data_v2'),
-                       layer = 'dissolve_mtbs_perims_1984-2015_DD_20170501', quiet= TRUE) %>%
+  mtbs_fire <- st_read(dsn = file.path(mtbs_raw, 'mtbs_perimeter_data'),
+                       layer = 'mtbs_perims_DD', quiet= TRUE) %>%
     filter(Year >= '2001') %>%
-    st_transform(p4string_ea) %>%
+    st_transform(st_crs(states)) %>%
     mutate(discovery_date = ymd(paste(Year, StartMonth, StartDay, sep="-")),
            discovery_year = year(discovery_date),
            discovery_day = day(discovery_date),
            discovery_month = month(discovery_date),
            discovery_doy = yday(discovery_date)) %>%
-    st_intersection(., st_union(usa)) %>%
+    st_intersection(., st_union(states)) %>%
     rename_all(tolower) %>%
     dplyr::select(fire_id, fire_name, discovery_date, discovery_year, discovery_day, discovery_month, discovery_doy, acres) %>%
     # Below we are categorizing the fires as in the East or West based on the -97th parallel - which is what MTBS uses
@@ -75,7 +91,7 @@ if (!exists('mtbs_fire')) {
     sfc_as_cols(., st_centroid(geometry)) %>%
     mutate(mtbs_region = ifelse(x < -97, 'West', 'East')) %>%
     dplyr::select(-x, -y) %>%
-    st_transform(p4string_ea)
+    st_transform(st_crs(states))
 }
 
 if(!file.exists(file.path(fire_dir, 'mtbs_ecoreg.gpkg'))) {

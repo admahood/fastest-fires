@@ -1,5 +1,10 @@
 libs <- c("tidyverse", "lme4", "lmerTest", "mblm", "lubridate",
-          "broom", "nlme","ggpubr")
+          "broom", "nlme","ggpubr", "gridExtra")
+iini <-function(x){
+  #stands for install if not installed
+  if (!x %in% rownames(installed.packages())) install.packages(x)
+}
+lapply(libs, iini)
 lapply(libs, library, character.only = TRUE)
 
 getmode <- function(v) {
@@ -30,7 +35,7 @@ dd <- d %>%
          results = map(fit, augment)) %>%
   unnest(results)
 
-dd_lme <- d %>%
+dd_lm <- d %>%
   dplyr::select(year, ecoregion, duration) %>%
   nest(-ecoregion) %>%
   mutate(fit = map(data, ~ lm(duration ~ year,
@@ -46,6 +51,9 @@ dd_lc <- d %>%
   summarise(duration_mean = mean(duration),
             duration_sd = sd(duration)) %>%
   ungroup()%>%
+  filter(lc != "Barren" & 
+           lc != "Permanent Snow and Ice" &
+           lc != "Water Bodies") %>%
   nest(-lc) %>%
   mutate(fit = map(data, ~ mblm(duration_mean ~ year, data=., repeated=F)),
          results = map(fit, augment)) %>%
@@ -60,17 +68,6 @@ dd_lc_lme <- d %>%
   unnest(results)
 
 write_csv(dd_lc, "data/yearly_duration_lc.csv")
-
-# plot means ----------
-ggplot(d, aes(x = as.factor(year), y=duration)) +
-  geom_boxplot(outlier.shape = NA) +
-  facet_wrap(~lc)+
-  ylim(low=0, high = 40)
-ggplot(d, aes(x = as.factor(year), y=duration)) +
-  geom_boxplot(outlier.shape = NA) +
-  facet_wrap(~ecoregion)+
-  ylim(low=0, high = 40)
-
 
 # model it properly - ecoregion ------------------------------------------------
 dd$mod3 <- dd_lme$.fitted
@@ -111,9 +108,9 @@ pp <- ggplot(dd, aes(x=year, y=duration_mean))+
 cowplot::ggdraw()+
   cowplot::draw_plot(pp,0,0,1,1)+
   cowplot::draw_grob(tableGrob(table_, rows = NULL,
-                               theme = ttheme_minimal(base_size =10)),
+                               theme = ttheme_minimal(base_size =9)),
                      .6,.07,.2,.2) +
-  ggsave("images/ts_lmm.png", width=9, height = 7)
+  ggsave("images/ts_lmm.png", width=12, height = 9)
 
 ggplot(d, aes(x = year, y=duration, color = ecoregion)) +
   #geom_point() +
@@ -121,6 +118,8 @@ ggplot(d, aes(x = year, y=duration, color = ecoregion)) +
   geom_line(aes(y=predict(mod2)))
 
 # by landcover --------------------------------------------------------
+
+
 lmer(duration ~ year + (year|lc), d) -> mod3
 dd_lc$mod3 = predict(mod3, newdata = dd_lc)
 

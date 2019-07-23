@@ -1,11 +1,11 @@
-ecoregion,slope,p
-Tropical Wet Forests,0.026,0.36332
-Eastern Temperate Forests,0.005,0.77848
-Great Plains,-0.075,6.7e-4
-North American Deserts,-0.048,0.0017
-Mediterranean California,-0.065,0.02591
-Temperate Sierras,0.036,0.78349
-Southern Semi-Arid Highlands,0.031,0.20664
-Northwestern Forested Mountains,0.118,0.0066
-Northern Forests,-0.18,0.01363
-Marine West Coast Forest,0.085,0.08596
+ecoregion,slope,p,min_duration,max_duration
+Tropical Wet Forests,0.026,0.36332,7.2875,14.188118811881187
+Eastern Temperate Forests,0.005,0.77848,9.648528099910793,12.00079554494829
+Great Plains,-0.075,6.7e-4,7.321698113207547,9.748129675810473
+North American Deserts,-0.048,0.0017,6.023474178403756,8.38671875
+Mediterranean California,-0.065,0.02591,5.883116883116883,11.552238805970148
+Temperate Sierras,0.036,0.78349,7,11.666666666666666
+Southern Semi-Arid Highlands,0.031,0.20664,5.2,10.764705882352942
+Northwestern Forested Mountains,0.118,0.0066,8.509316770186336,13.309623430962343
+Northern Forests,-0.18,0.01363,3.25,13.5
+Marine West Coast Forest,0.085,0.08596,5,11.5

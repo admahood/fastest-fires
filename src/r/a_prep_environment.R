@@ -1,3 +1,4 @@
+# missing the object s3_base which is used in script c_import_clean_data.R
 
 packages <- c("tidyverse", "magrittr", "raster", "RCurl", "sf", "assertthat", 'lubridate', 
               'viridis', 'lwgeom', 'scales', 'velox', 'ggmap','RColorBrewer', 'gridExtra', 
@@ -52,3 +53,7 @@ draft_figs_dir <- file.path(results_dir, 'draft_figures')
 
 var_dir <- list(results_dir, draft_figs_dir)
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
+
+#s3 paths (for modis events)
+
+s3_events_path <- "s3://earthlab-natem/modis-burned-area/delineated_events"

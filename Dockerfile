@@ -2,8 +2,15 @@ FROM rocker/geospatial:latest
 MAINTAINER "Adam Mahood" adam.mahood@colorado.edu
 
 RUN install2.r --error \
+  doParallel \
+  lme4 \
+  lmerTest \
   lwgeom \ 
-  velox \
-  ggmap \ 
+  ggmap \
+  ggpubr \
   ggthemes \
-  stars
+  nngeo
+  mblm \
+  stars \
+  strucchange \
+  velox \

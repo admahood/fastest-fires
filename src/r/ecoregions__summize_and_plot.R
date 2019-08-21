@@ -27,12 +27,16 @@ ecoregions_l1 <- ecoregions_l321 %>%
   left_join(ecoregion_summary)
 
 ggplot() +
-  geom_sf(data = ecoregions_l1, aes(fill = avg_fsr)) +
-  scale_fill_viridis()
+  geom_sf(data = ecoregions_l1, aes(fill = avg_fsr), color = "transparent") +
+  scale_fill_viridis(name = "Mean FSR (ha/day)") +
+  theme_void() +
+  theme(legend.position = "bottom")
 
 ggplot() +
-  geom_sf(data = ecoregions_l1, aes(fill = avg_max_growth)) +
-  scale_fill_viridis()
+  geom_sf(data = ecoregions_l1, aes(fill = avg_max_growth), color = "transparent") +
+  scale_fill_viridis(name = "Avg Maximum Daily Growth (ha)") +
+  theme_void() +
+  theme(legend.position = "bottom")
 
 # temporal trends ==============================================================
 

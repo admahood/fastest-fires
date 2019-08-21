@@ -9,8 +9,8 @@ RUN install2.r --error \
   ggmap \
   ggpubr \
   ggthemes \
-  nngeo
+  nngeo \
   mblm \
   stars \
   strucchange \
-  velox \
+  velox 

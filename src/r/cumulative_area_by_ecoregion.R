@@ -3,7 +3,7 @@
 # convert to acres or ha
 
 # setup ------------------------------------------------------------------------
-libs <- c("tidyverse", "sf")
+libs <- c("tidyverse", "sf", "ggpubr", "cowplot")
 lapply(libs, library, character.only = TRUE)
 
 daily_file <- Sys.glob("data/daily_stats*")

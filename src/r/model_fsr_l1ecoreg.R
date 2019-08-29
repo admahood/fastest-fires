@@ -1,3 +1,18 @@
+library(ggpubr)
+lvl1_eco_fsr_ts <- modis_events %>%
+  filter(!is.na(l1_eco)) %>%
+  st_set_geometry(NULL) %>%
+  group_by(l1_eco, ignition_year) %>%
+  summarise(na_l1name = first(l1_ecoregion),
+                mean_fsr = mean(fsr_acres_per_day)) %>%
+  dplyr::rename(year = ignition_year) %>%
+  ungroup()
+
+# random thought
+# ggplot(modis_events) +
+#   geom_bar(aes(x=ignition_month)) +
+#   facet_wrap(~ignition_year)
+
 ecoreg1_fsr_df <-   as.data.frame(lvl1_eco_fsr_ts) %>%
   dplyr::select(na_l1name, year, mean_fsr) %>%
   na.omit() %>%
@@ -30,7 +45,7 @@ sp <- ggscatter(fund_models_aug, x = "cyear", y = "mean_fsr",
                 add = "reg.line", conf.int = TRUE) +
   stat_cor(aes(color = na_l1name, label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = -1.25,  label.y = 14) +
   geom_text(data = pct_increase, aes(color = na_l1name, x = round(x_val, 3), y = round(y_val, 3), label = paste('%Inc = ', round(pct_inc, 3)))) +
-  facet_wrap(~na_l1name) +
+  facet_wrap(~na_l1name, scales = "free") +
   theme(legend.position = 'none')
 ggsave(file = 'results/yearly_mean_fsr_ecoreg1.pdf', sp, width = 15, height = 9, dpi=1200, scale = 2, units = "cm")
 
@@ -56,9 +71,14 @@ pct_increase <- fund_models_aug %>%
 sp_mblm <- ggscatter(fund_models_aug, x = "cyear", y = "mean_fsr",
                 color = "na_l1name", palette = "jco",
                 add = "reg.line", conf.int = TRUE) +
-  stat_cor(aes(color = na_l1name, label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = -1.25,  label.y = 14) +
-  geom_text(data = pct_increase, aes(color = na_l1name, x = round(x_val, 3), y = round(y_val, 3), label = paste('%Inc = ', round(pct_inc, 3)))) +
-  facet_wrap(~na_l1name) +
+  stat_cor(aes(color = na_l1name, 
+               label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), 
+           label.x = -1.25,  label.y = c(14,28)) +
+  geom_text(data = pct_increase, aes(color = na_l1name, 
+                                     x = round(x_val, 3), 
+                                     y = round(y_val, 3), 
+                                     label = paste('%Inc = ', round(pct_inc, 3)))) +
+  facet_wrap(~na_l1name, scales = "free") +
   theme(legend.position = 'none')
 ggsave(file = 'results/yearly_mean_fsr_ecoreg1_mblm.pdf', sp_mblm, width = 15, height = 9, dpi=1200, scale = 2, units = "cm")
 

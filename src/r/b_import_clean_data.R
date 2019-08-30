@@ -118,4 +118,19 @@ if(!file.exists(file.path(modis_event_dir, "modis_event_polygons_cus.gpkg"))){
 modis_events <- st_read(file.path(modis_event_dir, 
                                   "modis_event_polygons_cus.gpkg")) %>%
   filter(as.numeric(as.character(ignition_year)) >= '2001') 
+#gotta line up modis with mtbs (2001-2017)
 
+if(!file.exists(file.path(fire_dir, 'fired_ecoreg.gpkg'))) {
+  fired_ecoreg <- modis_events %>%
+    st_transform(crs = st_crs(ecoregions_l321)) %>%
+    st_intersection(., ecoregions_l321) #%>%
+    #mutate(fired_ba_ecoreg_ha = as.numeric(st_area(geometry))*0.0001) 
+  
+  fired_ecoreg %>%
+    st_write(., file.path(fire_dir, 'fired_ecoreg.gpkg'), delete_layer = TRUE)
+  
+  system(paste0('aws s3 sync data' , ' ', s3_base))
+  
+} else {
+  fired_ecoreg <- st_read(file.path(fire_dir, 'fired_ecoreg.gpkg'))
+}

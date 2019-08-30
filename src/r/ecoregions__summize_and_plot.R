@@ -38,6 +38,46 @@ ggplot() +
   theme_void() +
   theme(legend.position = "bottom")
 
+# level 3 ======================================================================
+
+fired_l3_summary <- fired_ecoreg %>%
+  st_set_geometry(NULL) %>%
+ # mutate(us_l3name = stringr::str_to_title(us_l3name)) %>%
+  group_by(us_l3name) %>%
+  summarise(avg_fsr = fsr_ha_per_day %>% mean(na.rm=TRUE),
+            avg_max_growth = max_growth_ha %>% mean(na.rm = TRUE)) %>%
+  ungroup()
+
+ecoregions_l3 <- ecoregions_l321 %>%
+  #mutate(us_l3name = stringr::str_to_title(us_l3name)) %>%
+  group_by(us_l3name) %>%
+  summarise() %>%
+  ungroup() %>%
+  nngeo::st_remove_holes() %>%
+  na.omit() %>%
+  left_join(fired_l3_summary)
+
+ggplot() +
+  geom_sf(data = ecoregions_l3, aes(fill = avg_fsr), color = "transparent") +
+ # scale_fill_viridis(option = "B",name = "Mean FSR (ha/day)") +
+  scale_fill_gradient2_tableau(palette =  "Red-Blue Diverging",
+                               trans = "reverse",
+                               name = "Mean FSR (ha/day)") +
+  theme_void() +
+  theme(legend.position = c(0.2,0.1),
+        legend.direction = "horizontal") +
+  ggsave("results/draft_figures/mean_fsr_l3.png")
+
+ggplot() +
+  geom_sf(data = ecoregions_l3, aes(fill = avg_max_growth), color = "transparent") +
+  #scale_fill_viridis(option = "B",name = "Avg Maximum Daily Growth (ha)") +
+  scale_fill_gradient2_tableau(palette =  "Red-Blue Diverging",
+                               trans = "reverse",
+                               name = "Avg Maximum Daily Growth (ha)") +
+  theme_void() +
+  theme(legend.position = c(0.2,0.1),
+        legend.direction = "horizontal")
+
 # temporal trends ==============================================================
 
 ecoregion_temporal <- modis_events %>%

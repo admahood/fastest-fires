@@ -42,7 +42,7 @@ ztrax_dir <- file.path(anthro_dir, 'ztrax')
 transportation_dir <- file.path(anthro_dir, 'transportation')
 
 # Check if directory exists for all variable aggregate outputs, if not then create
-var_dir <- list(fire_dir, modis_event_dir, stat_out, 
+var_dir <- list(fire_dir, modis_event_dir, stat_out, raw_dir,
                 bounds_dir, fishnet_dir, ecoreg_dir, ecoregionl3_dir,
                 anthro_dir, ztrax_dir, transportation_dir)
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
@@ -55,5 +55,7 @@ var_dir <- list(results_dir, draft_figs_dir)
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
 
 #s3 paths (for modis events)
-
+s3_base <- "s3://earthlab-amahood/fastest-fires/data"
 s3_events_path <- "s3://earthlab-natem/modis-burned-area/delineated_events"
+
+system(paste("aws s3 sync", s3_base, "data"))

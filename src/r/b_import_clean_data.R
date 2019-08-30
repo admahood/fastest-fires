@@ -66,11 +66,11 @@ if (!exists("ecoregions_l321")) {
 
 # Import and clean the MTBS polygons ===========================================
 if (!exists('mtbs_fire')) {
-  
-  mtbs_shp <- file.path(mtbs_raw, 'mtbs_perimeter_data')
+  mtbs_shp <- file.path(mtbs_raw, "mtbs_perims_DD.shp")
   if (!file.exists(mtbs_shp)) {
-    file_download(file.path(mtbs_raw, 'mtbs_perimeter_data','mtbs_perims_DD.shp'),
-                  mtbs_raw, "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/MTBS_Fire/data/composite_data/burned_area_extent_shapefile/mtbs_perimeter_data.zip")
+    file_download(file.path(mtbs_raw, "mtbs_perims_DD.shp"),
+                  mtbs_raw, 
+                  "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/MTBS_Fire/data/composite_data/burned_area_extent_shapefile/mtbs_perimeter_data.zip")
     
   }
   
@@ -115,5 +115,7 @@ if(!file.exists(file.path(modis_event_dir, "modis_event_polygons_cus.gpkg"))){
                file.path(s3_events_path, "modis_event_polygons_cus.gpkg"),
                file.path(modis_event_dir, "modis_event_polygons_cus.gpkg")))
 }
-modis_events <- st_read(file.path(modis_event_dir, "modis_event_polygons_cus.gpkg"))
+modis_events <- st_read(file.path(modis_event_dir, 
+                                  "modis_event_polygons_cus.gpkg")) %>%
+  filter(as.numeric(as.character(ignition_year)) >= '2001') 
 

@@ -1,4 +1,7 @@
 library(ggpubr)
+source("src/r/a_prep_environment.R")
+source("src/r/b_import_clean_data.R")
+
 lvl1_eco_fsr_ts <- modis_events %>%
   filter(!is.na(l1_eco)) %>%
   st_set_geometry(NULL) %>%

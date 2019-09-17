@@ -76,7 +76,8 @@ ggplot() +
                                name = "Avg Maximum Daily Growth (ha)") +
   theme_void() +
   theme(legend.position = c(0.2,0.1),
-        legend.direction = "horizontal")
+        legend.direction = "horizontal") +
+  ggsave("results/draft_figures/avg_max_fsr_l3.png")
 
 # temporal trends ==============================================================
 
@@ -86,18 +87,124 @@ ecoregion_temporal <- modis_events %>%
   filter(is.na(l1_ecoregion) == F &
            is.na(lc_name) == F) %>%
   group_by(l1_ecoregion, ignition_year, lc_name) %>%
-  summarise(avg_fsr = fsr_ha_per_day %>% mean(na.rm=TRUE),
-            avg_max_growth = max_growth_ha %>% mean(na.rm = TRUE)) %>%
+  summarise(n = n(),
+            peak_season = mean(as.numeric(ignition_month)),
+            season_length = sd(ignition_date) *2,
+            avg_fsr = fsr_ha_per_day %>% median(na.rm=TRUE),
+            avg_max_growth = max_growth_ha %>% median(na.rm = TRUE),
+            max_growth = max_growth_ha %>% max(na.rm = TRUE)) %>%
   ungroup() %>%
-  rename(na_l1name = l1_ecoregion) 
+  rename(na_l1name = l1_ecoregion) %>%
+  filter(lc_name != "Barren",
+         lc_name != "Water Bodies",
+         lc_name != "Permanent Wetlands",
+         lc_name != "Permanent Snow and Ice",
+         na_l1name != "Northern Forests");ecoregion_temporal
+
 mods <- ecoregion_temporal %>%
   nest(-na_l1name) %>%
   mutate(fit = map(data, ~ lm(avg_fsr ~ ignition_year*lc_name,
                               data = .x)),
          results = map(fit, glance)) %>%
+  unnest(results) %>%
+  left_join(label_positions)
+
+# just look at it
+ggplot(filter(ecoregion_temporal, n>5)) +
+  geom_point(aes(x=ignition_year, y=avg_fsr, color = lc_name)) +
+  geom_smooth(aes(x=ignition_year, y=avg_fsr, color = lc_name),
+              method="lm", se=FALSE) +
+  
+  facet_wrap(~na_l1name, scales = "free_y") +
+  geom_label(data = mods, x=-Inf, y = Inf, 
+            aes(group = na_l1name,
+                label = paste('R2:', round(r.squared, 3), "\n",
+                              "p:", round(p.value, 4))),
+            hjust = 0,
+            vjust = 1,
+            alpha=0.75) +
+  theme_pubr() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank()) +
+  ggsave("results/draft_figures/eco_lc_avg_fsr_trends.png")
+
+mods1 <- ecoregion_temporal %>%
+  nest(-na_l1name) %>%
+  mutate(fit = map(data, ~ lm(log(max_growth) ~ ignition_year*lc_name,
+                              data = .x)),
+         results = map(fit, glance)) %>%
   unnest(results)
 
-dplyr::arrange(mods, desc(r.squared))
+ggplot(filter(ecoregion_temporal, n>5)) +
+  geom_point(aes(x=ignition_year, y=log(max_growth), color = lc_name)) +
+  geom_smooth(aes(x=ignition_year, y=log(max_growth), color = lc_name),
+              method="lm", se=FALSE) +
+  facet_wrap(~na_l1name, scales = "free_y") +
+  geom_label(data = mods1, x=-Inf, y = Inf, 
+             aes(group = na_l1name,
+                 label = paste('R2:', round(r.squared, 3), "\n",
+                               "p:", round(p.value, 4))),
+             hjust = 0,
+             vjust = 1,
+             alpha=0.75) +
+  theme_pubr() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())+
+  ggsave("results/draft_figures/eco_lc_max_growth_trends.png")
+
+ggplot(filter(ecoregion_temporal, n>5)) +
+  geom_point(aes(x=ignition_year, y=peak_season, color = lc_name)) +
+  geom_smooth(aes(x=ignition_year, y=peak_season, color = lc_name),
+              method="lm", se=FALSE) +
+  theme_pubr() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())+
+  facet_wrap(~na_l1name, scales = "free_y")
+
+ggplot(filter(ecoregion_temporal, n>5)) +
+  geom_point(aes(x=ignition_year, y=season_length, color = lc_name)) +
+  geom_smooth(aes(x=ignition_year, y=season_length, color = lc_name),
+              method="lm", se=FALSE) +
+  theme_pubr() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())+
+  facet_wrap(~na_l1name, scales = "free_y")
+
+ggplot(modis_events %>% filter(ignition_year != "2019",
+                               is.na(l1_ecoregion) == FALSE), 
+       aes(x = as.numeric(as.character(ignition_doy)), 
+                        color = ignition_year)) +
+  geom_density() +
+  theme_pubr() +
+  scale_color_viridis_d()+
+  facet_wrap(~l1_ecoregion, scales="free_y", nrow = 2)
+
+modis_events <- modis_events %>%
+  mutate(temp_bin = ifelse(as.numeric(as.character(ignition_year)) <2010,
+                           "2000-2009","2010-2019"))
+
+mods2 <- modis_events %>%
+  filter(!is.na(l1_ecoregion)) %>%
+  mutate(ignition_doy = as.numeric(as.character(ignition_doy))) %>%
+  nest(-l1_ecoregion) %>%
+  mutate(fit = map(data, ~ kruskal.test(.x$ignition_doy ~ .x$temp_bin,
+                              data = .x)),
+         results = map(fit, glance)) %>%
+  unnest(results)
+
+ggplot(modis_events %>% filter(ignition_year != "2019",
+                               is.na(l1_ecoregion) == FALSE)) +
+  geom_density(aes(x = as.numeric(as.character(ignition_doy)), 
+                   color = temp_bin)) +
+  theme_pubr() +
+  geom_label(data = mods2, x=-Inf, y = Inf, 
+             aes(group = l1_ecoregion,
+                 label = paste("Kruskal-Wallis: p =", round(p.value, 4))),
+             hjust = 0,
+             vjust = 1,
+             alpha=0.75) +
+  facet_wrap(~l1_ecoregion, scales="free_y", nrow = 2) +
+  ggsave("densityplots_seasonality.png")
 
 # divide between winter / summer months
 ggplot(data = ecoregion_temporal %>% filter(na_l1name == "North American Deserts"),

@@ -3,6 +3,7 @@
 source("src/r/a_prep_environment.R")
 source("src/r/b_import_clean_data.R")
 library(tidyverse)
+library(ggpubr)
 library(nngeo) # for st_remove_holes
 library(mblm)
 
@@ -152,6 +153,8 @@ ggplot(filter(ecoregion_temporal, n>5)) +
         legend.title = element_blank())+
   ggsave("results/draft_figures/eco_lc_max_growth_trends.png")
 
+# sesonality ===================================================================
+
 ggplot(filter(ecoregion_temporal, n>5)) +
   geom_point(aes(x=ignition_year, y=peak_season, color = lc_name)) +
   geom_smooth(aes(x=ignition_year, y=peak_season, color = lc_name),
@@ -159,7 +162,8 @@ ggplot(filter(ecoregion_temporal, n>5)) +
   theme_pubr() +
   theme(legend.position = "bottom",
         legend.title = element_blank())+
-  facet_wrap(~na_l1name, scales = "free_y")
+  facet_wrap(~na_l1name, scales = "free_y") +
+  ggsave("results/draft_figures/peak_season_trend.png")
 
 ggplot(filter(ecoregion_temporal, n>5)) +
   geom_point(aes(x=ignition_year, y=season_length, color = lc_name)) +
@@ -168,7 +172,8 @@ ggplot(filter(ecoregion_temporal, n>5)) +
   theme_pubr() +
   theme(legend.position = "bottom",
         legend.title = element_blank())+
-  facet_wrap(~na_l1name, scales = "free_y")
+  facet_wrap(~na_l1name, scales = "free_y") +
+  ggsave("results/draft_figures/season_length_trend.png")
 
 ggplot(modis_events %>% filter(ignition_year != "2019",
                                is.na(l1_ecoregion) == FALSE), 
@@ -204,7 +209,7 @@ ggplot(modis_events %>% filter(ignition_year != "2019",
              vjust = 1,
              alpha=0.75) +
   facet_wrap(~l1_ecoregion, scales="free_y", nrow = 2) +
-  ggsave("densityplots_seasonality.png")
+  ggsave("results/draft_figures/densityplots_seasonality.png")
 
 # divide between winter / summer months
 ggplot(data = ecoregion_temporal %>% filter(na_l1name == "North American Deserts"),
@@ -214,3 +219,61 @@ ggplot(data = ecoregion_temporal %>% filter(na_l1name == "North American Deserts
   theme_bw() +
   theme(legend.position = "none")+
   geom_smooth(method = "lm")
+
+
+# size vs speed ================================================================
+library(lme4)
+library(lmerTest)
+lmer(fsr_km2_per_day ~ total_area_km2 + (1|lc_name), 
+     data = modis_events) %>% summary
+lm(fsr_km2_per_day ~ total_area_km2*lc_name, data = modis_events) %>% summary
+
+ggplot(filter(modis_events, !is.na(l1_ecoregion)), 
+       aes(x=total_area_ha, y=fsr_ha_per_day, color = lc_name)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_pubr()
+  
+ggplot(filter(modis_events, !is.na(l1_ecoregion), lc_name != "Water Bodies",
+              lc_name != "Permanent Snow and Ice", lc_name != "Barren"), 
+       aes(x=total_area_km2, y=fsr_km2_per_day, color = lc_name)) +
+  geom_smooth(method = "lm") +
+  geom_point() +
+  theme_pubr() +
+  theme(legend.title = element_blank(),
+        legend.position = c(1,0),
+        legend.justification = c(1,0))+
+  guides(color=guide_legend(ncol=2)) +
+  facet_wrap(~l1_ecoregion, scales = "free")+
+  ggtitle("Fire Spread Rate ~ Fire Size")+
+  ggsave("results/draft_figures/fsr-total_area.png")
+
+ggplot(filter(modis_events, !is.na(l1_ecoregion), lc_name != "Water Bodies",
+              lc_name != "Permanent Snow and Ice", lc_name != "Barren"), 
+       aes(x=total_area_km2, y=max_growth_km2,
+                         color = lc_name)) +
+  geom_smooth(method = "lm") +
+  geom_point() +
+  facet_wrap(~l1_ecoregion, scales = "free") +
+  theme_pubr() +
+  theme(legend.title = element_blank(),
+        legend.position = c(1,0),
+        legend.justification = c(1,0))+
+  guides(color=guide_legend(ncol=2)) +
+  ggtitle("Max Single Day Growth ~ Fire Size")+
+  ggsave("results/draft_figures/max_growth-total_area.png")
+
+ggplot(filter(modis_events, !is.na(l1_ecoregion), lc_name != "Water Bodies",
+              lc_name != "Permanent Snow and Ice", lc_name != "Barren"), 
+       aes(x=total_area_km2, y=max_growth_km2,
+           color = lc_name)) +
+  geom_smooth(method = "lm") +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~lc_name) +
+  theme_pubr() +
+  theme(legend.title = element_blank(),
+        legend.position = "none",
+        legend.justification = c(1,0))+
+  #guides(color=guide_legend(ncol=4)) +
+  ggtitle("Max Single Day Growth ~ Fire Size")+
+  ggsave("results/draft_figures/max_growth-total_area_lc_only.png")

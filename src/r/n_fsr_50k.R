@@ -128,3 +128,13 @@ p2 <- modis_fish_ff %>%
           legend.box.just = "bottom")+
     guides(col = guide_legend(override.aes = list(shape = 15, size = 7))) +
     ggsave(file = file.path(draft_figs_dir, "mean_max_growth_50k.png"), dpi = 300);p2
+
+# stats for proposal
+
+n_reds <- modis_fish_ff %>%
+  filter(class_max_max_fsr == "> 10,000") %>%
+  nrow()
+
+n_reds*50*50
+
+n_reds/nrow(modis_fish_ff)*100

@@ -5,22 +5,27 @@
 # setup ------------------------------------------------------------------------
 libs <- c("tidyverse", "sf", "ggpubr", "cowplot")
 lapply(libs, library, character.only = TRUE)
-
+options(stringsAsFactors = FALSE)
 daily_file <- Sys.glob("data/daily_stats*")
-ecoregion_file <- "/home/a/data/background/ecoregions/us_eco_l1.gpkg"
+ecoregion_file <- "data/bounds/ecoregions/us_eco_l3/us_eco_l321.gpkg"
 
 # data processing --------------------------------------------------------------
-daily<- read_csv(daily_file)
 
 # this takes a few minutes
-ecoregions <- st_read(ecoregion_file) %>%
-  mutate(l1_ecoregion = as.character(l1_ecoregion))
+ecoregions <- st_read(ecoregion_file) %>% 
+  group_by(na_l1name) %>%
+  summarise() %>%
+  ungroup() %>%
+  nngeo::st_remove_holes() %>%
+  mutate(na_l1name = str_to_title(na_l1name))%>%
+  na.omit()
 
-elabs <- ecoregions$l1_ecoregion %>% as.character()
+elabs <- ecoregions$na_l1name
 
 #merging some classes together
 #table(daily$lc_name)
-daily <- filter(daily, lc_name != "Permanent Snow and Ice",
+daily <- read_csv(daily_file)%>%
+  filter( lc_name != "Permanent Snow and Ice",
                 lc_name != "Water Bodies",
                 lc_name != "Urban and Built-up Lands",
                 lc_name != "Barren",
@@ -48,15 +53,16 @@ er <- list()
 da <- list()
 cp <- list()
 labs <- vector()
-for(i in ecoregions$NA_L1CODE){
+for(i in 1:length(ecoregions$na_l1name)){
   er[[i]] <- ggplot(ecoregions) + 
-    geom_sf(data=ecoregions,fill = "transparent", color = "grey", size=0.1) +
-    geom_sf(data = filter(ecoregions, NA_L1CODE == i), color = "black", size=0.3)+
+    geom_sf(data = ecoregions,fill = "transparent", color = "grey", size=0.1) +
+    geom_sf(data = filter(ecoregions, na_l1name == ecoregions$na_l1name[i]), 
+            color = "black", size=0.3)+
     theme_void()+
     theme(panel.grid.major = element_line(color = "transparent"))
   
-  da[[i]]<- ggplot(filter(daily, l1_eco == i), aes(x=event_day, cum_area_km2, 
-                                                   group = id)) +
+  da[[i]]<- ggplot(data = filter(daily, l1_ecoregion == ecoregions$na_l1name[i]), 
+                   aes(x=event_day, cum_area_km2, group = id)) +
     geom_line(alpha=0.5, aes(color = lc_name)) +
     scale_color_manual(values = values)+
     theme_pubr() +
@@ -65,7 +71,7 @@ for(i in ecoregions$NA_L1CODE){
     theme(legend.position = "none") +
     ylim(c(0,2620)) +
     xlim(c(0,213)) +
-    ggtitle(filter(ecoregions, NA_L1CODE == i)$l1_ecoregion) +
+    ggtitle(ecoregions$na_l1name[i]) +
     theme(plot.title = element_text(size = 10),
           axis.text = element_blank(),
           axis.ticks = element_blank())
@@ -74,7 +80,7 @@ for(i in ecoregions$NA_L1CODE){
     draw_plot(da[[i]]) +
     draw_plot(er[[i]], x = 0.55, y=0.5, width = 0.45, height=0.45)
   
-  labs[i] <- filter(ecoregions, NA_L1CODE == i)$l1_ecoregion
+  labs[i] <- ecoregions$na_l1name[i]
 }
 
 #grabbing the legend as an independent object
@@ -85,11 +91,11 @@ leg <- get_legend(ggplot(daily, aes(x=event_day, cum_area_km2,
                     guides(color=guide_legend(ncol=2)))
 
 # multistage, super advanced plotting process
-x=ggarrange(plotlist=cp, nrow=3, ncol=4) %>%
+x <- ggarrange(plotlist=cp, nrow=3, ncol=4) %>%
   annotate_figure(left = text_grob(expression(Area~Burned~(km^2)), rot = 90, size = 20),
                   bottom = text_grob("Days From Ignition", size = 20)) 
 
-y=ggdraw() +
+y <- ggdraw() +
   draw_plot(x) +
   draw_plot(leg, x=0.6, y=0.1, width = 0.4, height = .25)+
   ggsave("images/ecoregions_cum_area.pdf", 

@@ -8,7 +8,7 @@ library(nngeo) # for st_remove_holes
 library(mblm)
 
 # level 1 ======================================================================
-
+options(stringsAsFactors = FALSE)
 ecoregion_summary <- modis_events %>%
   #removing geometry speeds up the process a lot
   st_set_geometry(NULL) %>% 
@@ -16,7 +16,8 @@ ecoregion_summary <- modis_events %>%
   summarise(avg_fsr = fsr_ha_per_day %>% mean(na.rm=TRUE),
             avg_max_growth = max_growth_ha %>% mean(na.rm = TRUE)) %>%
   ungroup() %>%
-  rename(na_l1name = l1_ecoregion)
+  rename(na_l1name = l1_ecoregion) %>%
+  filter(!is.na(na_l1name))
 
 ecoregions_l1 <- ecoregions_l321 %>%
   mutate(na_l1name = stringr::str_to_title(na_l1name)) %>%
@@ -85,8 +86,8 @@ ggplot() +
 ecoregion_temporal <- modis_events %>%
   st_set_geometry(NULL) %>% 
   mutate(ignition_year = as.numeric(as.character(ignition_year)))%>%
-  filter(is.na(l1_ecoregion) == F &
-           is.na(lc_name) == F) %>%
+  filter(!is.na(l1_ecoregion) &
+           !is.na(lc_name)) %>%
   group_by(l1_ecoregion, ignition_year, lc_name) %>%
   summarise(n = n(),
             peak_season = mean(as.numeric(ignition_month)),
@@ -152,6 +153,59 @@ ggplot(filter(ecoregion_temporal, n>5)) +
   theme(legend.position = "bottom",
         legend.title = element_blank())+
   ggsave("results/draft_figures/eco_lc_max_growth_trends.png")
+
+# landcover --------------------------------------------------------------------
+
+lc_temporal <- modis_events %>%
+  mutate(ignition_year = as.numeric(as.character(ignition_year)),
+         lc_name = as.character(lc_name)) %>%
+  filter(ignition_year < 2019) %>%
+  filter(lc_name == "Grasslands" |
+           lc_name == "Woody Savannas" |
+           lc_name == "Evergreen Needleleaf Forests") %>%
+  st_set_geometry(NULL) %>% 
+  mutate(ignition_year = as.numeric(as.character(ignition_year)))%>%
+  filter(!is.na(l1_ecoregion) &
+           !is.na(lc_name)) %>%
+  group_by(ignition_year, lc_name) %>%
+  summarise(n = n(),
+            peak_season = mean(as.numeric(ignition_month)),
+            season_length = sd(ignition_date) *2,
+            avg_fsr = fsr_ha_per_day %>% median(na.rm=TRUE),
+            avg_max_growth = max_growth_ha %>% median(na.rm = TRUE),
+            max_growth = max_growth_ha %>% max(na.rm = TRUE)) %>%
+  ungroup() #%>%
+  # rename(na_l1name = l1_ecoregion) %>%
+  # filter(lc_name != "Barren",
+  #        lc_name != "Water Bodies",
+  #        lc_name != "Permanent Wetlands",
+  #        lc_name != "Permanent Snow and Ice",
+  #        na_l1name != "Northern Forests");lc_temporal
+
+mods_lc <- lc_temporal %>%
+  nest(-lc_name) %>%
+  mutate(fit = map(data, ~ lm(log(max_growth) ~ ignition_year,
+                              data = .x)),
+         results = map(fit, glance)) %>%
+  unnest(results)
+
+# for the grant proposal
+ggplot(lc_temporal, aes(x=ignition_year, y = log(max_growth))) +
+  geom_point() +
+  facet_wrap(~lc_name, scales = "free_y", nrow = 3, ncol=1) +
+  geom_smooth(method = "lm") +
+  geom_label(data = mods_lc, x=-Inf, y = Inf, 
+             aes(group = lc_name,
+                 label = paste('R2:', round(r.squared, 3), "\n",
+                               "p:", round(p.value, 4))),
+             hjust = 0,
+             vjust = 1,
+             alpha=0.75) +
+  theme_pubr() +
+  xlab("Ignition Year") +
+  ylab("Max Growth (Natural Log)") +
+  ggsave("images/fig_proposal_temp_trends.png",
+         width = 4, height = 9)
 
 # sesonality ===================================================================
 

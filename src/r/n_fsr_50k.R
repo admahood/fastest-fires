@@ -138,3 +138,41 @@ n_reds <- modis_fish_ff %>%
 n_reds*50*50
 
 n_reds/nrow(modis_fish_ff)*100
+
+proposal_fig <- modis_fish_ff %>%
+  na.omit() %>%
+  filter(freq != 0) %>%
+  # transform(class_max_fsr = factor(class_freq, levels=c("1 - 25", "25 - 100","100 - 250", "250 - 500", "> 500"))) %>%
+  transform(class_max_max_fsr = factor(class_max_max_fsr, 
+                                       levels=c("< 200", "200 - 500", "500 - 2,000",
+                                                "2,000 - 10,000","> 10,000"))) %>%
+  ggplot() +
+  geom_polygon(data = st_df, aes(x = long,y = lat, group=group), 
+               color='black', fill = "white", size = .50)+
+  geom_point(aes(x = long, y = lat, color = class_max_max_fsr),
+             size = 2.8) +
+  coord_equal() +
+  #scale_color_viridis_d(option = "A", direction = -1) +
+  scale_color_manual(values = rev(brewer.pal(5,"Spectral")),
+                     name = "Fire Spread Rate (ha/day)") +
+  #scale_size_discrete(range = c(.25, 2)) +
+  theme_nothing(legend = TRUE) +
+  ggtitle("Maximum Single Day Fire Growth") +
+  theme(plot.title = element_text(hjust = 0.1, size = 30, face = "plain"),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        legend.text = element_text(size = 20, face = "plain"),
+        legend.title = element_text(size = 22, face= "plain"),
+        legend.key = element_rect(fill = "white"),
+        legend.position = c(.04,0),
+        legend.justification = c(0,0),
+        legend.background = element_rect(fill ="transparent"),
+        legend.direction = "vertical",
+        legend.box = "horizontal",
+        legend.box.just = "bottom")+
+  guides(col = guide_legend(ncol=2,
+                            override.aes = list(shape = 15, 
+                                                size = 10))) +
+  # guides(col=guide_legend())+
+  ggsave(file = file.path(draft_figs_dir, "proposal_fig.png"), dpi = 300);proposal_fig

@@ -154,16 +154,20 @@ proposal_fig <- modis_fish_ff %>%
   coord_equal() +
   #scale_color_viridis_d(option = "A", direction = -1) +
   scale_color_manual(values = rev(brewer.pal(5,"Spectral")),
-                     name = "Fire Spread Rate (ha/day)") +
+                     name = "Hectares") +
   #scale_size_discrete(range = c(.25, 2)) +
   theme_nothing(legend = TRUE) +
-  ggtitle("Maximum Single Day Fire Growth") +
-  theme(plot.title = element_text(hjust = 0.1, size = 30, face = "plain"),
+  #ggtitle("Maximum Single Day Fire Growth") +
+  annotate("text", label = "Maximum Single Day Fire Growth", x=400000, y=700000,
+           size = 12) +
+  theme(#plot.title = element_text(hjust = 0.1, size = 30, face = "plain"
+                              #    ,margin=margin(0,0,0,0)
+                               #   ),
         strip.background = element_blank(),
         strip.text.x = element_blank(),
         strip.text.y = element_blank(),
-        legend.text = element_text(size = 20, face = "plain"),
-        legend.title = element_text(size = 22, face= "plain"),
+        legend.text = element_text(size = 18, face = "plain"),
+        legend.title = element_text(size = 20, face= "plain"),
         legend.key = element_rect(fill = "white"),
         legend.position = c(.04,0),
         legend.justification = c(0,0),

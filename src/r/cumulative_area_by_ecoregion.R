@@ -41,12 +41,15 @@ daily <- read_csv(daily_file)%>%
                 lc_name = replace(lc_name, lc_name == "Evergreen Broadleaf Forests", 
                                   "Broadleaf Forests"),
                 lc_name = replace(lc_name, lc_name == "Evergreen Needleleaf Forests", 
-                                  "Conifer Forests"))
+                                  "Conifer Forests"),
+                l1_ecoregion = replace(l1_ecoregion, l1_ecoregion == "Northwester Forested Mountains",
+                                       "Northwestern Forested Mtns"))
 
 # plotting ---------------------------------------------------------------------
 
 # this makes the legend colors consistent
-values <- RColorBrewer::brewer.pal(length(unique(daily$lc_name)), "Dark2")
+values <- RColorBrewer::brewer.pal(length(unique(daily$lc_name)), "Set1")
+values[6] <- "grey50"
 names(values) <- unique(daily$lc_name)
 
 er <- list()
@@ -63,7 +66,7 @@ for(i in 1:length(ecoregions$na_l1name)){
   
   da[[i]]<- ggplot(data = filter(daily, l1_ecoregion == ecoregions$na_l1name[i]), 
                    aes(x=event_day, cum_area_km2, group = id)) +
-    geom_line(alpha=0.5, aes(color = lc_name)) +
+    geom_line(alpha=0.75, aes(color = lc_name)) +
     scale_color_manual(values = values)+
     theme_pubr() +
     xlab("") +
@@ -86,8 +89,10 @@ for(i in 1:length(ecoregions$na_l1name)){
 #grabbing the legend as an independent object
 leg <- get_legend(ggplot(daily, aes(x=event_day, cum_area_km2, 
                                     group = id)) +
-                    geom_line(alpha=0.5, aes(color = lc_name)) +
-                    scale_color_manual(values = values,name = "Land Cover")+
+                    geom_line(aes(color = lc_name)) +
+                    theme_pubr()+
+                    scale_color_manual(values=values,
+                                       name = "Land Cover")+
                     guides(color=guide_legend(ncol=2)))
 
 # multistage, super advanced plotting process
@@ -100,3 +105,9 @@ y <- ggdraw() +
   draw_plot(leg, x=0.6, y=0.1, width = 0.4, height = .25)+
   ggsave("images/ecoregions_cum_area.pdf", 
          dpi=600, width = 10, height = 7.5)
+
+y <- ggdraw() +
+  draw_plot(x) +
+  draw_plot(leg, x=0.6, y=0.1, width = 0.4, height = .25)+
+  ggsave("images/ecoregions_cum_area.png", 
+         dpi=300, width = 10, height = 7.5)

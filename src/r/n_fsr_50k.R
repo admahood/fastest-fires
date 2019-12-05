@@ -63,7 +63,7 @@ modis_fish_ff <- left_join(fs50_df, modis_fish, by = "fishid50k") %>%
          lat = coords.x2) %>%
   dplyr::select(-coords.x1, -coords.x2) 
 
-
+# classInt::classIntervals(modis_fish_ff$max_max_growth, n=5, style = "quantile")
 p1 <- modis_fish_ff %>%
   na.omit() %>%
   filter(freq != 0) %>%

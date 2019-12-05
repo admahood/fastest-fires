@@ -30,3 +30,6 @@ ggplot(modis_events %>% filter(total_area_ha >1000,
   ylab("Maximum Single Day Fire Growth (ha)") +
   xlab("Count")+
   ggsave("results/draft_figures/max_growth_hist_by_lc.png", height = 8, width =12)
+
+library(classInt)
+classInt::classIntervals(modis_events$max_growth_ha, n = 5, style = "jenks")

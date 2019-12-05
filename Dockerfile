@@ -13,4 +13,6 @@ RUN install2.r --error \
   mblm \
   stars \
   strucchange \
+  tidyverse \
+  sf \
   velox 

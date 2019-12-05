@@ -159,10 +159,10 @@ ggplot(filter(ecoregion_temporal, n>5)) +
 lc_temporal <- modis_events %>%
   mutate(ignition_year = as.numeric(as.character(ignition_year)),
          lc_name = as.character(lc_name)) %>%
-  filter(ignition_year < 2019) %>%
-  filter(lc_name == "Grasslands" |
-           lc_name == "Woody Savannas" |
-           lc_name == "Evergreen Needleleaf Forests") %>%
+  filter(ignition_year < 2019 & ignition_year>2000) %>%
+  # filter(lc_name == "Grasslands" |
+  #          lc_name == "Woody Savannas" |
+  #          lc_name == "Evergreen Needleleaf Forests") %>%
   st_set_geometry(NULL) %>% 
   mutate(ignition_year = as.numeric(as.character(ignition_year)))%>%
   filter(!is.na(l1_ecoregion) &
@@ -174,27 +174,32 @@ lc_temporal <- modis_events %>%
             avg_fsr = fsr_ha_per_day %>% median(na.rm=TRUE),
             avg_max_growth = max_growth_ha %>% median(na.rm = TRUE),
             max_growth = max_growth_ha %>% max(na.rm = TRUE)) %>%
-  ungroup() #%>%
+  ungroup() %>%
   # rename(na_l1name = l1_ecoregion) %>%
-  # filter(lc_name != "Barren",
-  #        lc_name != "Water Bodies",
-  #        lc_name != "Permanent Wetlands",
-  #        lc_name != "Permanent Snow and Ice",
-  #        na_l1name != "Northern Forests");lc_temporal
+  filter(lc_name != "Barren",
+         lc_name != "Water Bodies",
+         lc_name != "Permanent Wetlands",
+         lc_name != "Permanent Snow and Ice");lc_temporal
 
-mods_lc <- lc_temporal %>%
+mods_lc1 <- lc_temporal %>%
   nest(-lc_name) %>%
   mutate(fit = map(data, ~ lm(log(max_growth) ~ ignition_year,
                               data = .x)),
          results = map(fit, glance)) %>%
   unnest(results)
 
+
+n<-vector(mode = "numeric", length=nrow(mods_lc1))
+for(i in 1:nrow(mods_lc1)) n[i]<-dim(mods_lc1$data[[i]])[1]
+
+mods_lc1$n <-n
+
 # for the grant proposal
 ggplot(lc_temporal, aes(x=ignition_year, y = log(max_growth))) +
-  geom_point() +
-  facet_wrap(~lc_name, scales = "free_y", nrow = 3, ncol=1) +
-  geom_smooth(method = "lm") +
-  geom_label(data = mods_lc, x=-Inf, y = Inf, 
+  geom_point(aes(color = lc_name)) +
+  facet_wrap(~lc_name, scales = "free_y") +
+  geom_smooth(method = "lm", aes(color = lc_name),) +
+  geom_label(data = mods_lc1, x=-Inf, y = Inf, 
              aes(group = lc_name,
                  label = paste('R2:', round(r.squared, 3), "\n",
                                "p:", round(p.value, 4))),
@@ -204,8 +209,10 @@ ggplot(lc_temporal, aes(x=ignition_year, y = log(max_growth))) +
   theme_pubr() +
   xlab("Ignition Year") +
   ylab("Max Growth (Natural Log)") +
+  ggtitle("Temporal trends by landcover") +
+  guides(color = FALSE)+
   ggsave("images/fig_proposal_temp_trends.png",
-         width = 4, height = 9)
+         width =12, height =10)
 
 # sesonality ===================================================================
 
@@ -317,17 +324,45 @@ ggplot(filter(modis_events, !is.na(l1_ecoregion), lc_name != "Water Bodies",
   ggtitle("Max Single Day Growth ~ Fire Size")+
   ggsave("results/draft_figures/max_growth-total_area.png")
 
+# land cover only figure =======================================================
+mods_lc <-filter(modis_events, !is.na(l1_ecoregion), lc_name != "Water Bodies",
+                 lc_name != "Permanent Snow and Ice", lc_name != "Barren", 
+                 lc_name != "Permanent Wetlands") %>%
+  nest(-lc_name) %>%
+  mutate(fit = map(data, ~ lm(total_area_km2 ~ max_growth_km2,
+                              data = .x)),
+         results = map(fit, glance)) %>%
+  unnest(results)
+
+n<-vector(mode = "numeric", length=nrow(mods_lc))
+for(i in 1:nrow(mods_lc)) n[i]<-dim(mods_lc$data[[i]])[1]
+
+mods_lc$n <-n
+
 ggplot(filter(modis_events, !is.na(l1_ecoregion), lc_name != "Water Bodies",
-              lc_name != "Permanent Snow and Ice", lc_name != "Barren"), 
-       aes(x=total_area_km2, y=max_growth_km2,
-           color = lc_name)) +
-  geom_smooth(method = "lm") +
-  geom_point(alpha = 0.5) +
-  facet_wrap(~lc_name) +
+              lc_name != "Permanent Snow and Ice", lc_name != "Barren", 
+              lc_name != "Permanent Wetlands"), 
+       aes(y=total_area_km2, x=max_growth_km2)) +
+  geom_smooth(method = "lm",aes(color = lc_name)) +
+  geom_point(alpha = 0.5, aes(color = lc_name)) +
+  facet_wrap(~lc_name, scales = "free") +
+  geom_label(data = mods_lc, x=-Inf, y = Inf, 
+             aes(group = lc_name,
+                 label = paste('R2:', round(r.squared, 3), "\n",
+                               "p:", round(p.value, 6), "\n",
+                               "n:",  format(n, big.mark = ",", trim=TRUE))),
+             hjust = 0,
+             vjust = 1,
+             alpha=0.75) +
   theme_pubr() +
   theme(legend.title = element_blank(),
         legend.position = "none",
         legend.justification = c(1,0))+
   #guides(color=guide_legend(ncol=4)) +
-  ggtitle("Max Single Day Growth ~ Fire Size")+
-  ggsave("results/draft_figures/max_growth-total_area_lc_only.png")
+  ggtitle(paste("Fire Size ~ Max Single Day Growth"), paste0("Model w/o interaction explains ",
+                summary(lm(total_area_km2~max_growth_km2, modis_events))$r.squared%>%round(2)*100,
+          "% of Variation"))+
+  xlab(expression(Maximum~Single~Day~Growth~(km^2)))+
+  ylab(expression(Total~Area~Burned~(km^2)))+
+  ggsave("results/draft_figures/max_growth-total_area_lc_only.png",
+         height=10, width=12)

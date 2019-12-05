@@ -1,9 +1,11 @@
 # Import and prep the USA shapefile ============================================
 if (!exists("states")){
-  file_download(shp_path_name = file.path(us_raw_dir, 'cb_2016_us_state_20m.shp'),
-                          shp_dir = us_raw_dir,
-                          url = "https://www2.census.gov/geo/tiger/GENZ2016/shp/cb_2016_us_state_20m.zip")
-    
+  shp_path_name <- file.path(us_raw_dir, 'cb_2016_us_state_20m.shp')
+  if(!file.exists(shp_path_name)){
+    file_download(shp_path_name = shp_path_name,
+                            shp_dir = us_raw_dir,
+                            url = "https://www2.census.gov/geo/tiger/GENZ2016/shp/cb_2016_us_state_20m.zip")
+  }
   states <- st_read(file.path(us_raw_dir, 'cb_2016_us_state_20m.shp')) %>%
     sf::st_transform(p4string_ea) %>%
     dplyr::filter(!STUSPS %in% c("HI", "AK", "PR")) %>%

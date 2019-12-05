@@ -17,8 +17,12 @@ ecoregions <- st_read(ecoregion_file) %>%
   summarise() %>%
   ungroup() %>%
   nngeo::st_remove_holes() %>%
-  mutate(na_l1name = str_to_title(na_l1name))%>%
+  mutate(na_l1name = str_to_title(na_l1name),
+         na_l1name = replace(na_l1name,
+                             na_l1name == "Northwestern Forested Mountains",
+                             "Northwestern Forested Mtns"))%>%
   na.omit()
+  
 
 elabs <- ecoregions$na_l1name
 
@@ -42,14 +46,15 @@ daily <- read_csv(daily_file)%>%
                                   "Broadleaf Forests"),
                 lc_name = replace(lc_name, lc_name == "Evergreen Needleleaf Forests", 
                                   "Conifer Forests"),
-                l1_ecoregion = replace(l1_ecoregion, l1_ecoregion == "Northwester Forested Mountains",
+                l1_ecoregion = replace(l1_ecoregion, 
+                                       l1_ecoregion == "Northwestern Forested Mountains",
                                        "Northwestern Forested Mtns"))
 
 # plotting ---------------------------------------------------------------------
 
 # this makes the legend colors consistent
 values <- RColorBrewer::brewer.pal(length(unique(daily$lc_name)), "Set1")
-values[6] <- "grey50"
+values[6] <- "gold"
 names(values) <- unique(daily$lc_name)
 
 er <- list()
@@ -89,15 +94,15 @@ for(i in 1:length(ecoregions$na_l1name)){
 #grabbing the legend as an independent object
 leg <- get_legend(ggplot(daily, aes(x=event_day, cum_area_km2, 
                                     group = id)) +
-                    geom_line(aes(color = lc_name)) +
+                    geom_point(aes(color = lc_name), shape = 15, size=5) +
                     theme_pubr()+
                     scale_color_manual(values=values,
-                                       name = "Land Cover")+
+                                       name = "")+
                     guides(color=guide_legend(ncol=2)))
 
 # multistage, super advanced plotting process
 x <- ggarrange(plotlist=cp, nrow=3, ncol=4) %>%
-  annotate_figure(left = text_grob(expression(Area~Burned~(km^2)), rot = 90, size = 20),
+  annotate_figure(left = text_grob(expression(Cumulative~Area~Burned), rot = 90, size = 20),
                   bottom = text_grob("Days From Ignition", size = 20)) 
 
 y <- ggdraw() +

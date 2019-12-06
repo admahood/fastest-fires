@@ -63,10 +63,11 @@ for(i in road_dirs){
 
 
 for(i in road_dirs){
+  t0<- Sys.time()
   county<-str_extract(i, "\\d{5}")
   outfile <- paste0("/home/a/data/background/roads/rd_tifs/",
                     "road_density_km_km2_",county,".tif")
-  if(!file.exits(outfile)){
+  if(!file.exists(outfile)){
     sl<- st_read(i) %>%
       st_transform(crs=crs(blank_raster, asText = TRUE))
     br<-crop(blank_raster, as(sl, "Spatial"))
@@ -87,5 +88,7 @@ for(i in road_dirs){
   
     fasterize(z, br, field = "road_density_km_km2") %>% 
       writeRaster(filename=outfile)
+    print(i)
+    print(Sys.time - t0)
   }
 }

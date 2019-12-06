@@ -15,7 +15,14 @@ homes_per_road <- raster("data/home_density.tif")
 blank_raster <- homes_per_road
 blank_raster[] <- 0
 
+# A few counties didn't have road layers. They're not in CUS so no worries
+# counties[counties$GEOID == 69085,]
+# counties[counties$GEOID == 60030,]
+
+counties <- counties %>%
+  filter(GEOID != 69085, GEOID != 60030)
 geoids<-counties$GEOID
+
 basep <- "ftp://ftp2.census.gov/geo/tiger/TIGER2019/ROADS/tl_2019_"
 endp <- "_roads.zip"
 
@@ -34,13 +41,7 @@ foreach(i = geoids)%dopar%{
 list.files("data/background/roads/counties/") %>% length
 geoids%>% length
 
-# A few counties didn't have road layers. They're not in CUS so no worries
-counties[counties$GEOID == 69085,]
-counties[counties$GEOID == 60030,]
 
-counties <- counties %>%
-  filter(GEOID != 69085, GEOID != 60030)
-geoids<-counties$GEOID
 
 registerDoParallel(detectCores()-1)
 foreach(i = geoids)%dopar%{

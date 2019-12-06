@@ -7,8 +7,8 @@ library(foreach)
 library(spex)
 library(fasterize)
 
-system(paste("aws s3 sync s3://earthlab-amahood/fastest-fires/data/counties data/background/counties"))
-system(paste("aws s3 cp s3://earthlab-amahood/fastest-fires/data/home_density.tif data/home_density.tif"))
+system(paste("aws s3 sync s3://earthlab-amahood/fastest-fires/data/counties data/background/counties --only-show-errors"))
+system(paste("aws s3 cp s3://earthlab-amahood/fastest-fires/data/home_density.tif data/home_density.tif --only-show-errors"))
 
 counties <- st_read("data/background/counties/")
 homes_per_road <- raster("data/home_density.tif")
@@ -22,12 +22,13 @@ endp <- "_roads.zip"
 #dir.create("data/background/roads/counties", recursive=T)
 
 # first, downloading the roads for each county
+dir.create("data/background/roads/counties", recursive =TRUE)
 registerDoParallel(detectCores()-1)
 foreach(i = geoids)%dopar%{
   outfile<- paste0("data/background/roads/counties/roads_",i, ".zip" )
   if(!file.exists(outfile)){
     download.file(url = paste0(basep, i, endp),
-                  destfile = outfile)
+                  destfile = outfile,quiet = TRUE)
   }
 }
 list.files("/home/a/data/background/roads/counties/") %>% length

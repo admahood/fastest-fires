@@ -7,8 +7,11 @@ library(foreach)
 library(spex)
 library(fasterize)
 
-counties <- st_read("/home/a/data/background/counties/")
-homes_per_road <- raster("data/homes_per_rd_seg/homes_per_rdseg.tif")
+system(paste("aws s3 sync s3://earthlab-amahood/fastest-fires/data/counties data/background/counties"))
+system(paste("aws s3 cp s3://earthlab-amahood/fastest-fires/data/home_density.tif data/home_density.tif"))
+
+counties <- st_read("data/background/counties/")
+homes_per_road <- raster("data/home_density.tif")
 blank_raster <- homes_per_road
 blank_raster[] <- 0
 
@@ -16,17 +19,17 @@ geoids<-counties$GEOID
 basep <- "ftp://ftp2.census.gov/geo/tiger/TIGER2019/ROADS/tl_2019_"
 endp <- "_roads.zip"
 
+#dir.create("data/background/roads/counties", recursive=T)
 
 # first, downloading the roads for each county
 registerDoParallel(detectCores()-1)
 foreach(i = geoids)%dopar%{
-  outfile<- paste0("/home/a/data/background/roads/counties/roads_",i, ".zip" )
+  outfile<- paste0("data/background/roads/counties/roads_",i, ".zip" )
   if(!file.exists(outfile)){
     download.file(url = paste0(basep, i, endp),
                   destfile = outfile)
   }
 }
-
 list.files("/home/a/data/background/roads/counties/") %>% length
 geoids%>% length
 
@@ -40,8 +43,8 @@ geoids<-counties$GEOID
 
 registerDoParallel(detectCores()-1)
 foreach(i = geoids)%dopar%{
-  exdir<- paste0("/home/a/data/background/roads/counties/",i, "/" )
-  outfile<- paste0("/home/a/data/background/roads/counties/roads_",i, ".zip" )
+  exdir<- paste0("data/background/roads/counties/",i, "/" )
+  outfile<- paste0("data/background/roads/counties/roads_",i, ".zip" )
   if(!dir.exists(exdir)){
     dir.create(exdir)
     unzip(outfile, exdir = exdir)
@@ -61,11 +64,11 @@ for(i in road_dirs){
   }
 }
 
-
+dir.create("data/background/roads/rd_tifs")
 for(i in road_dirs){
   t0<- Sys.time()
   county<-str_extract(i, "\\d{5}")
-  outfile <- paste0("/home/a/data/background/roads/rd_tifs/",
+  outfile <- paste0("data/background/roads/rd_tifs/",
                     "road_density_km_km2_",county,".tif")
   if(!file.exists(outfile)){
     sl<- st_read(i) %>%
@@ -90,5 +93,8 @@ for(i in road_dirs){
       writeRaster(filename=outfile)
     print(i)
     print(Sys.time - t0)
+    
+    system(paste("aws s3 cp", outfile, 
+                 "s3://earthlab-amahood/fastest-fires/",outfile))
   }
 }

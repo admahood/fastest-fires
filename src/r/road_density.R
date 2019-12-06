@@ -71,7 +71,7 @@ for(i in road_dirs){
   outfile <- paste0("data/background/roads/rd_tifs/",
                     "road_density_km_km2_",county,".tif")
   if(!file.exists(outfile)){
-    sl<- st_read(i) %>%
+    sl<- st_read(i, quiet=T) %>%
       st_transform(crs=crs(blank_raster, asText = TRUE))
     br<-crop(blank_raster, as(sl, "Spatial"))
     x<-br %>%

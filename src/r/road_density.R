@@ -76,7 +76,9 @@ for(i in road_dirs){
     br<-crop(blank_raster, as(sl, "Spatial"))
     x<-br %>%
       spex::polygonize() %>%
-      mutate(road_density_km_km2 = 0)
+      dplyr::select(-home_density) %>%
+      mutate(road_density_km_km2 = 0,
+             FID = 1:nrow(.))
     
     registerDoParallel(detectCores()-1)
     z<-foreach(c = 1:nrow(x), .combine = rbind) %dopar%{
@@ -86,16 +88,19 @@ for(i in road_dirs){
         sum() %>% 
         as.numeric()
       y[1,"road_density_km_km2"] <- lc/1000
-      return(y)
+      return(y %>% st_set_geometry(NULL) )
     }
-  
-    fasterize(z, br, field = "road_density_km_km2") %>% 
+    zz<- z %>%
+      left_join(x %>% dplyr::select(-road_density_km_km2), by="FID") %>%
+      dplyr::select(-FID) %>%
+      st_as_sf()
+    fasterize(zz, br, field = "road_density_km_km2") %>%
       writeRaster(filename=outfile)
     print(i)
-    print(Sys.time - t0)
+    print(Sys.time() - t0)
     
     system(paste("aws s3 cp", outfile, 
-                 "s3://earthlab-amahood/fastest-fires/",outfile,
+                 file.path("s3://earthlab-amahood/fastest-fires",outfile),
                  "--only-show-errors"))
   }
 }

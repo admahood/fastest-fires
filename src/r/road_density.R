@@ -10,18 +10,41 @@ library(fasterize)
 system(paste("aws s3 sync s3://earthlab-amahood/fastest-fires/data/counties data/background/counties --only-show-errors"))
 system(paste("aws s3 cp s3://earthlab-amahood/fastest-fires/data/home_density.tif data/home_density.tif --only-show-errors"))
 
+
+source("src/r/a_prep_environment.R")
+
 counties <- st_read("data/background/counties/")
 homes_per_road <- raster("data/home_density.tif")
 blank_raster <- homes_per_road
 blank_raster[] <- 0
 
+if (!exists("states")){
+  shp_path_name <- file.path(us_raw_dir, 'cb_2016_us_state_20m.shp')
+  if(!file.exists(shp_path_name)){
+    file_download(shp_path_name = shp_path_name,
+                  shp_dir = us_raw_dir,
+                  url = "https://www2.census.gov/geo/tiger/GENZ2016/shp/cb_2016_us_state_20m.zip")
+  }
+  states <- st_read(file.path(us_raw_dir, 'cb_2016_us_state_20m.shp')) %>%
+    sf::st_transform(crs=st_crs(counties)) %>%
+    dplyr::filter(!STUSPS %in% c("HI", "AK", "PR")) %>%
+    dplyr::select(STATEFP, STUSPS) %>%
+    rename_all(tolower)
+}
+
+
 # A few counties didn't have road layers. They're not in CUS so no worries
 # counties[counties$GEOID == 69085,]
 # counties[counties$GEOID == 60030,]
+bb<- st_bbox(states) %>%
+  st_as_sfc
 
 counties <- counties %>%
-  filter(GEOID != 69085, GEOID != 60030)
-geoids<-counties$GEOID
+  filter(GEOID != 69085, GEOID != 60030) %>%
+  mutate(STATEFP = as.numeric(STATEFP)) %>%
+  filter(STATEFP < 57)  %>%
+  st_intersection(bb)
+geoids<-counties$GEOID %>% as.character
 
 basep <- "ftp://ftp2.census.gov/geo/tiger/TIGER2019/ROADS/tl_2019_"
 endp <- "_roads.zip"
@@ -68,6 +91,7 @@ dir.create("data/background/roads/rd_tifs")
 for(i in road_dirs){
   t0<- Sys.time()
   county<-str_extract(i, "\\d{5}")
+  if(county %in% geoids){
   outfile <- paste0("data/background/roads/rd_tifs/",
                     "road_density_km_km2_",county,".tif")
   if(!file.exists(outfile)){
@@ -102,5 +126,6 @@ for(i in road_dirs){
     system(paste("aws s3 cp", outfile, 
                  file.path("s3://earthlab-amahood/fastest-fires",outfile),
                  "--only-show-errors"))
+  }
   }
 }

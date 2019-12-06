@@ -31,7 +31,7 @@ foreach(i = geoids)%dopar%{
                   destfile = outfile,quiet = TRUE)
   }
 }
-list.files("/home/a/data/background/roads/counties/") %>% length
+list.files("data/background/roads/counties/") %>% length
 geoids%>% length
 
 # A few counties didn't have road layers. They're not in CUS so no worries

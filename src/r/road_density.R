@@ -41,8 +41,6 @@ foreach(i = geoids)%dopar%{
 list.files("data/background/roads/counties/") %>% length
 geoids%>% length
 
-
-
 registerDoParallel(detectCores()-1)
 foreach(i = geoids)%dopar%{
   exdir<- paste0("data/background/roads/counties/",i, "/" )
@@ -55,7 +53,7 @@ foreach(i = geoids)%dopar%{
 }
 
 
-road_dirs <- list.files("/home/a/data/background/roads/counties", full.names = TRUE)
+road_dirs <- list.files("data/background/roads/counties", full.names = TRUE)
 
 # making sure everything's there
 for(i in road_dirs){
@@ -97,6 +95,7 @@ for(i in road_dirs){
     print(Sys.time - t0)
     
     system(paste("aws s3 cp", outfile, 
-                 "s3://earthlab-amahood/fastest-fires/",outfile))
+                 "s3://earthlab-amahood/fastest-fires/",outfile,
+                 "--only-show-errors"))
   }
 }

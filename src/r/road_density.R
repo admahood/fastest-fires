@@ -96,7 +96,7 @@ for(i in road_dirs){
       st_as_sf()
     fasterize(zz, br, field = "road_density_km_km2") %>%
       writeRaster(filename=outfile)
-    print(i)
+    print(paste(which(road_dirs == i), "out of",length(road_dirs)))
     print(Sys.time() - t0)
     
     system(paste("aws s3 cp", outfile, 

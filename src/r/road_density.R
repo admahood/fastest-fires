@@ -1,0 +1,86 @@
+#Road Density script
+library(tidyverse)
+library(sf)
+library(doParallel)
+library(raster)
+library(foreach)
+counties <- st_read("/home/a/data/background/counties/")
+homes_per_road <- raster("data/homes_per_rd_seg/homes_per_rdseg.tif")
+blank_raster <- homes_per_road
+blank_raster[] <- 0
+
+geoids<-counties$GEOID
+basep <- "ftp://ftp2.census.gov/geo/tiger/TIGER2019/ROADS/tl_2019_"
+endp <- "_roads.zip"
+
+
+# first, downloading the roads for each county
+registerDoParallel(detectCores()-1)
+foreach(i = geoids)%dopar%{
+  outfile<- paste0("/home/a/data/background/roads/counties/roads_",i, ".zip" )
+  if(!file.exists(outfile)){
+    download.file(url = paste0(basep, i, endp),
+                  destfile = outfile)
+  }
+}
+
+list.files("/home/a/data/background/roads/counties/") %>% length
+geoids%>% length
+
+# A few counties didn't have road layers. They're not in CUS so no worries
+counties[counties$GEOID == 69085,]
+counties[counties$GEOID == 60030,]
+
+counties <- counties %>%
+  filter(GEOID != 69085, GEOID != 60030)
+geoids<-counties$GEOID
+
+registerDoParallel(detectCores()-1)
+foreach(i = geoids)%dopar%{
+  exdir<- paste0("/home/a/data/background/roads/counties/",i, "/" )
+  outfile<- paste0("/home/a/data/background/roads/counties/roads_",i, ".zip" )
+  if(!dir.exists(exdir)){
+    dir.create(exdir)
+    unzip(outfile, exdir = exdir)
+    unlink(outfile)
+  }
+}
+
+
+road_dirs <- list.files("/home/a/data/background/roads/counties", full.names = TRUE)
+
+# making sure everything's there
+for(i in road_dirs){
+  if(str_extract(i, "\\d{5}")%>%str_sub( 1,2) %>% as.numeric() < 57){
+   x<-list.files(i)
+    if(length(x)<1){
+   print(i)}
+  }
+}
+library(spex)
+library(fasterize)
+
+for(i in road_dirs){
+  sl<- st_read(i) %>%
+    st_transform(crs=crs(blank_raster, asText = TRUE))
+  br<-crop(blank_raster, as(sl, "Spatial"))
+  x<-br %>%
+    spex::polygonize() %>%
+    mutate(road_density_km_km2 = 0)
+  
+  z<-foreach(c = 1:nrow(x), .combine = rbind) %dopar%{
+    y<-x[c,]
+    lc <- st_intersection(sl, y) %>%
+      st_length() %>% 
+      sum() %>% 
+      as.numeric()
+    y[1,"road_density_km_km2"] <- lc/1000
+    return(y)
+  }
+  county<-str_extract(i, "\\d{5}")
+  outfile <- paste0("/home/a/data/background/roads/rd_tifs/",
+                    "road_density_km_km2_",county,".tif")
+  fasterize(z, br, field = "road_density_km_km2") %>% 
+    writeRaster(filename=outfile)
+  
+}

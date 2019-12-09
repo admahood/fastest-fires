@@ -1,4 +1,6 @@
 #Road Density script
+# this downloads the road files for each county in the 
+# continental US and calculates road density for 1km pixels
 library(tidyverse)
 library(sf)
 library(doParallel)
@@ -129,3 +131,26 @@ for(i in road_dirs){
   }
   }
 }
+
+road_tifs <- list.files("data/background/roads/rd_tifs", full.names =T)
+final_raster <- blank_raster
+
+for(i in 1:length(road_tifs)){
+  r<- raster(road_tifs[i]) %>% 
+    extend(blank_raster) 
+  r[is.na(r[])] <- 0 
+  final_raster <- final_raster + r
+}
+
+writeRaster(final_raster, "data/road_denisity_km_km2.tif")
+
+system(paste("aws s3 cp", "data/road_denisity_km_km2.tif", 
+             file.path("s3://earthlab-amahood/fastest-fires","data/road_denisity_km_km2.tif"),
+             "--only-show-errors"))
+
+homes_per_road/final_raster %>%
+  writeRaster("data/home_density_per_km_km2_road.tif")
+
+system(paste("aws s3 cp", "data/home_density_per_km_km2_road.tif", 
+             file.path("s3://earthlab-amahood/fastest-fires","data/home_density_per_km_km2_road.tif"),
+             "--only-show-errors"))

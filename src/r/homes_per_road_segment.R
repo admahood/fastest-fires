@@ -67,3 +67,67 @@ p1 <- res_p %>%
            hjust = "center",
            size=7) +
   ggsave(file = file.path(draft_figs_dir, "fire_traffic.png"), dpi = 300);p1
+
+
+p2 <- res %>%
+  st_centroid %>%
+  ggplot() +
+  geom_polygon(data = st_df, aes(x = long,y = lat, group=group), 
+               color='black', fill = "transparent", size = .50)+
+  geom_sf(aes(color = (log(1+homes_per_km_road))),
+          size = 2.3) +
+   scale_color_viridis_c(direction=-1, option="B")+
+  # scale_color_gradient2(low = "grey80", mid =("red"), high = "black",
+  #                       midpoint = 120)+
+  theme_nothing(legend = TRUE) +
+  labs(color = "Homes per km road\n(log-transformed+1)")+
+  theme(legend.position = c(0.05,0),
+        legend.justification = c(0,0),
+        legend.background = element_rect(fill = "transparent"))+
+  annotate("text", 
+           x= st_bbox(res)$xmin + ((st_bbox(res)$xmax- st_bbox(res)$xmin )/2),
+           y=st_bbox(res)$ymax - (st_bbox(res)$ymax/10) ,
+           label="Homes per km of road",
+           hjust = "center",
+           size=7) +
+  ggsave(file = file.path(draft_figs_dir, "homes_per_km_road_50k.png"), dpi = 300);p2
+
+# homes per km road ------------------------------------------------------------
+hpr<- raster("data/homes_per_km_road.tif")
+hpr[0]<-NA
+writeRaster(hpr,"data/homes_per_km_road_0_na.tif")
+
+hpr<- read_stars("data/homes_per_km_road_0_na.tif")
+
+mid<-exp(log(max(getValues(raster("data/homes_per_km_road_0_na.tif")), na.rm=T))/2)
+
+classInt::classIntervals(na.omit(getValues(raster("data/homes_per_km_road.tif"))), 
+                         fixedBreaks=c(0,10,20,50,100,500,1000, 100000),style ="fixed")
+
+for_plotting<-raster("data/homes_per_km_road.tif") %>%
+  as.data.frame(xy=TRUE) %>%
+  na.omit()%>%
+  filter(homes_per_km_road>0) %>%
+  mutate(classes = cut(homes_per_km_road, 
+                       breaks=c(0,5,10,20,50,100,100000000),
+                       labels = c("0-5", "5-10","10-20", "20-50", "50-100",
+                                  "100+")))
+
+library(RColorBrewer)
+p3 <- ggplot() +
+  geom_tile(data = for_plotting, aes(fill = classes, x=x,y=y)) +
+  theme_void() +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(6,"Spectral"),
+                    na.value ="white")+
+  geom_sf(data = states, fill = "transparent")+
+  annotate("text", 
+           x= st_bbox(hpr)$xmin + ((st_bbox(hpr)$xmax- st_bbox(hpr)$xmin )/2),
+           y=st_bbox(hpr)$ymax - (st_bbox(hpr)$ymax/10) ,
+           label="Homes per km of road",
+           hjust = "center",
+           size=7)+
+  labs(fill="Homes per km road") +
+  theme(legend.position=c(0.05,0.05),
+        legend.justification=c(0,0),
+        legend.title = element_blank()) +
+  ggsave("results/draft_figures/homes_per_km_road.png")

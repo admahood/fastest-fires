@@ -136,10 +136,9 @@ eco_trends_df<-foreach(i = 1:nrow(ecoregions_l321),.combine=rbind)%dopar%{
   system(paste("echo",i, ecoregions_l321[i,]$us_l3name %>% as.character()))  
   
   fishrow <- ecoregions_l321[i,]%>%
-    st_intersection(modis_points) # %>%
-  # filter(duration>2)
-  #errors
-  #100, 199, 298,397,496,595
+    st_intersection(modis_points)  %>%
+    filter(duration>5)
+
   if(nrow(fishrow) >10){
     
     mod_fsr <- mblm(fsr_ha_per_day ~ ignition_year, fishrow, 
@@ -176,7 +175,7 @@ eco_trends_df<-foreach(i = 1:nrow(ecoregions_l321),.combine=rbind)%dopar%{
 ecoregion_trends <- left_join(ecoregions_l321, eco_trends_df, by="us_l3name") %>%
   st_centroid()
 
-st_write(ecoregion_trends,"ecoregion_trends.gpkg")
+st_write(ecoregion_trends,"ecoregion_trends_duration_5_or_more.gpkg")
 
 mean_fsr <- ecoregion_trends %>%
   filter(n>=20) %>%
@@ -208,5 +207,29 @@ ggplot() +
   theme(legend.box = "horizontal",
         legend.position = c(0.05,0.04),
         legend.justification = c(0,0)) +  
-  ggtitle("Significant Trends in Maximum Single-Day Fire Growth",
+  ggtitle("Trends in Maximum Single-Day Fire Growth",
+          "Fire events longer than 5 days")
+
+ggplot() +
+  geom_sf(data = mean_fsr, color = "black",
+          aes(fill = ss), show.legend = "point") +
+  scale_color_manual(values=c("skyblue", "grey","red"))+
+  labs(size = "# Events", color= 'Direction of\nTrend')+
+  theme_void() +
+  theme(legend.box = "horizontal",
+        legend.position = c(0.05,0.04),
+        legend.justification = c(0,0)) +  
+  ggtitle("Trends in Maximum Single-Day Fire Growth",
+          "Fire events longer than 5 days")
+
+ggplot() +
+  geom_sf(data = duration, color = "black",
+          aes(fill = ss), show.legend = "point") +
+  scale_color_manual(values=c("skyblue", "grey","red"))+
+  labs(size = "# Events", color= 'Direction of\nTrend')+
+  theme_void() +
+  theme(legend.box = "horizontal",
+        legend.position = c(0.05,0.04),
+        legend.justification = c(0,0)) +  
+  ggtitle("Trends in Maximum Single-Day Fire Growth",
           "Fire events longer than 5 days")

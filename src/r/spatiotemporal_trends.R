@@ -177,30 +177,21 @@ ecoregion_trends <- left_join(ecoregions_l321, eco_trends_df, by="us_l3name") %>
 
 st_write(ecoregion_trends,"ecoregion_trends_duration_5_or_more.gpkg")
 
-mean_fsr <- ecoregion_trends %>%
-  filter(n>=20) %>%
-  mutate(class = ifelse(mean_fsr_trend_ha_day >0, "Positve", "Negative"),
-         sig = ifelse(mean_fsr_p < 0.05, "Significant", "Not Significant"),
-         ss = ifelse(sig == "Significant", class,"Not Significant")
-  )
-
-max_g <- ecoregion_trends %>%
-  filter(n>=20) %>%
-  mutate(class = ifelse(max_growth_trend_ha >0, "Positve", "Negative"),
-         sig = ifelse(max_growth_p < 0.05, "Significant", "Not Significant"),
-         ss = ifelse(sig == "Significant", class,"Not Significant")
-  )
-
-duration <- ecoregion_trends %>%
-  filter(n>=20) %>%
-  mutate(class = ifelse(duration_trend_days >0, "Positve", "Negative"),
-         sig = ifelse(duration_p < 0.05, "Significant", "Not Significant"),
-         ss = ifelse(sig == "Significant", class,"Not Significant")
+ecoregion_trends <- ecoregion_trends %>%
+  mutate(sign_fsr = ifelse(mean_fsr_trend_ha_day >0, "Positve", "Negative"),
+         sig_fsr = ifelse(mean_fsr_p < 0.05, "Significant", "Not Significant"),
+         class_fsr = ifelse(sig_fsr == "Significant", sign_fsr,"Not Significant"),
+         sign_mg = ifelse(max_growth_trend_ha >0, "Positve", "Negative"),
+         sig_mg = ifelse(max_growth_p < 0.05, "Significant", "Not Significant"),
+         class_mg = ifelse(sig_mg == "Significant", sign_mg,"Not Significant"),
+         sign_d = ifelse(duration_trend_days >0, "Positve", "Negative"),
+         sig_d = ifelse(duration_p < 0.05, "Significant", "Not Significant"),
+         class_d = ifelse(sig_d == "Significant", sign_d,"Not Significant")
   )
 
 ggplot() +
-  geom_sf(data = max_g, color = "black",
-          aes(fill = ss, size=n), show.legend = "point") +
+  geom_sf(data = ecoregion_trends, color = "black",
+          aes(fill = class_mg, size=n), show.legend = "point") +
   scale_color_manual(values=c("skyblue", "grey","red"))+
   labs(size = "# Events", color= 'Direction of\nTrend')+
   theme_void() +
@@ -211,25 +202,25 @@ ggplot() +
           "Fire events longer than 5 days")
 
 ggplot() +
-  geom_sf(data = mean_fsr, color = "black",
-          aes(fill = ss), show.legend = "point") +
+  geom_sf(data = ecoregion_trends, color = "black",
+          aes(fill = class_fsr), show.legend = "point") +
   scale_color_manual(values=c("skyblue", "grey","red"))+
   labs(size = "# Events", color= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
         legend.position = c(0.05,0.04),
         legend.justification = c(0,0)) +  
-  ggtitle("Trends in Maximum Single-Day Fire Growth",
+  ggtitle("Trends in Mean Fire Spread Rate",
           "Fire events longer than 5 days")
 
 ggplot() +
-  geom_sf(data = duration, color = "black",
-          aes(fill = ss), show.legend = "point") +
+  geom_sf(data = ecoregion_trends, color = "black",
+          aes(fill = class_d), show.legend = "point") +
   scale_color_manual(values=c("skyblue", "grey","red"))+
   labs(size = "# Events", color= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
         legend.position = c(0.05,0.04),
         legend.justification = c(0,0)) +  
-  ggtitle("Trends in Maximum Single-Day Fire Growth",
+  ggtitle("Trends in Fire Duration",
           "Fire events longer than 5 days")

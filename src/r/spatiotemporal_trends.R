@@ -176,6 +176,7 @@ ecoregion_trends <- left_join(ecoregions_l321, eco_trends_df, by="us_l3name") %>
   st_centroid()
 
 st_write(ecoregion_trends,"ecoregion_trends_duration_5_or_more.gpkg")
+system(paste("aws s3 sync","ecoregion_trends_duration_5_or_more.gpkg", s3_base))
 
 ecoregion_trends <- ecoregion_trends %>%
   mutate(sign_fsr = ifelse(mean_fsr_trend_ha_day >0, "Positve", "Negative"),

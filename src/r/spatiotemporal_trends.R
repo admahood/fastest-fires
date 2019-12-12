@@ -190,9 +190,10 @@ ecoregion_trends <- ecoregion_trends %>%
          class_d = ifelse(sig_d == "Significant", sign_d,"Not Significant")
   )
 
+# plotting
 ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
-          aes(fill = class_mg, size=n), show.legend = "point") +
+          aes(fill = class_mg), show.legend = "point") +
   scale_color_manual(values=c("skyblue", "grey","red"))+
   labs(size = "# Events", color= 'Direction of\nTrend')+
   theme_void() +

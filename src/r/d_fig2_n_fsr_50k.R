@@ -1,6 +1,7 @@
 source("src/r/a_prep_environment.R")
 source("src/r/b_import_clean_data.R")
 
+# classification functions -----------------------------------------------------
 classify_fsr <-  function(x) {
   ifelse(x < 15, "< 15",
          ifelse(x >= 15 & x < 40, "15 - 40",
@@ -31,7 +32,8 @@ classify_max_max_fsr <-  function(x) {
                        ifelse(x >= 2000 & x <10000, "2,000 - 10,000",
                               "> 10,000"))))
 }
-# need to turn modis_events into centroids
+
+# converting modis_events into centroids ---------------------------------------
 modis_fish <- fishnet_50k %>%
   st_intersection(., st_centroid(
     st_transform(modis_events, 
@@ -63,73 +65,7 @@ modis_fish_ff <- left_join(fs50_df, modis_fish, by = "fishid50k") %>%
          lat = coords.x2) %>%
   dplyr::select(-coords.x1, -coords.x2) 
 
-# classInt::classIntervals(modis_fish_ff$max_max_growth, n=5, style = "quantile")
-p1 <- modis_fish_ff %>%
-  na.omit() %>%
-  filter(freq != 0) %>%
-  # transform(class_freq = factor(class_freq, levels=c("1 - 25", "25 - 100","100 - 250", "250 - 500", "> 500"))) %>%
-  transform(class_fsr = factor(class_fsr, levels=c("< 15", "15 - 40", "40 - 100","100 - 400","> 400"))) %>%
-  ggplot() +
-    geom_polygon(data = st_df, aes(x = long,y = lat, group=group), 
-                 color='black', fill = "white", size = .50)+
-    geom_point(aes(x = long, y = lat, color = class_fsr),
-               size = 2.3) +
-    coord_equal() +
-    #scale_color_viridis_d(option = "A", direction = -1) +
-    scale_color_manual(values = rev(brewer.pal(5,"Spectral")),
-                       name = "Fire Spread Rate (ha/day)") +
-    #scale_size_discrete(range = c(.25, 2)) +
-    theme_nothing(legend = TRUE) +
-    ggtitle("Mean Fire Spread Rate") +
-    theme(plot.title = element_text(hjust = 0.1, size = 20),
-          strip.background = element_blank(),
-          strip.text.x = element_blank(),
-          strip.text.y = element_blank(),
-          legend.key = element_rect(fill = "white"),
-          legend.position = c(.04,0),
-          legend.justification = c(0,0),
-          legend.background = element_rect(fill ="transparent"),
-          legend.direction = "vertical",
-          legend.box = "horizontal",
-          legend.box.just = "bottom")+
-    guides(col = guide_legend(override.aes = list(shape = 15, size = 7))) +
-    ggsave(file = file.path(draft_figs_dir, "mean_fsr_50k.png"), dpi = 300);p1
-# legend.key = element_rect(fill = "white"))
-
-p2 <- modis_fish_ff %>%
-  na.omit() %>%
-  filter(freq != 0) %>%
-  # transform(class_max_fsr = factor(class_freq, levels=c("1 - 25", "25 - 100","100 - 250", "250 - 500", "> 500"))) %>%
-  transform(class_max_max_fsr = factor(class_max_max_fsr, 
-                                   levels=c("< 200", "200 - 500", "500 - 2,000",
-                                            "2,000 - 10,000","> 10,000"))) %>%
-  ggplot() +
-    geom_polygon(data = st_df, aes(x = long,y = lat, group=group), 
-                 color='black', fill = "white", size = .50)+
-    geom_point(aes(x = long, y = lat, color = class_max_max_fsr),
-               size = 2.3) +
-    coord_equal() +
-    #scale_color_viridis_d(option = "A", direction = -1) +
-    scale_color_manual(values = rev(brewer.pal(5,"Spectral")),
-                       name = "Fire Spread Rate (ha/day)") +
-    #scale_size_discrete(range = c(.25, 2)) +
-    theme_nothing(legend = TRUE) +
-    ggtitle("Maximum Single Day Fire Growth") +
-    theme(plot.title = element_text(hjust = 0.1, size = 20),
-          strip.background = element_blank(),
-          strip.text.x = element_blank(),
-          strip.text.y = element_blank(),
-          legend.key = element_rect(fill = "white"),
-          legend.position = c(.04,0),
-          legend.justification = c(0,0),
-          legend.background = element_rect(fill ="transparent"),
-          legend.direction = "vertical",
-          legend.box = "horizontal",
-          legend.box.just = "bottom")+
-    guides(col = guide_legend(override.aes = list(shape = 15, size = 7))) +
-    ggsave(file = file.path(draft_figs_dir, "mean_max_growth_50k.png"), dpi = 300);p2
-
-# stats for proposal
+# stats on high fire spread rates
 
 n_reds <- modis_fish_ff %>%
   filter(class_max_max_fsr == "> 10,000") %>%
@@ -138,6 +74,8 @@ n_reds <- modis_fish_ff %>%
 n_reds*50*50
 
 n_reds/nrow(modis_fish_ff)*100
+
+
 
 proposal_fig <- modis_fish_ff %>%
   na.omit() %>%

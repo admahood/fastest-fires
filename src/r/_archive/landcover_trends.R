@@ -1,4 +1,5 @@
 ## looking at landcover trends in modis
+## maybe group by ecoregion, or tile at first
 
 library(sf)
 library(raster)

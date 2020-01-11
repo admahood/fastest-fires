@@ -75,7 +75,8 @@ n_reds*50*50
 
 n_reds/nrow(modis_fish_ff)*100
 
-
+fig_vals <- rev(brewer.pal(5,"Spectral"))
+fig_vals[1] <- "grey"
 
 proposal_fig <- modis_fish_ff %>%
   na.omit() %>%
@@ -85,13 +86,12 @@ proposal_fig <- modis_fish_ff %>%
                                        levels=c("< 200", "200 - 500", "500 - 2,000",
                                                 "2,000 - 10,000","> 10,000"))) %>%
   ggplot() +
-  geom_polygon(data = st_df, aes(x = long,y = lat, group=group), 
-               color='black', fill = "white", size = .50)+
+  geom_sf(data = states, fill = "white")+
   geom_point(aes(x = long, y = lat, color = class_max_max_fsr),
              size = 2.8) +
-  coord_equal() +
+  # coord_equal() +
   #scale_color_viridis_d(option = "A", direction = -1) +
-  scale_color_manual(values = rev(brewer.pal(5,"Spectral")),
+  scale_color_manual(values = fig_vals,
                      name = "Hectares") +
   #scale_size_discrete(range = c(.25, 2)) +
   theme_nothing(legend = TRUE) +
@@ -117,4 +117,5 @@ proposal_fig <- modis_fish_ff %>%
                             override.aes = list(shape = 15, 
                                                 size = 10))) +
   # guides(col=guide_legend())+
-  ggsave(file = file.path(draft_figs_dir, "proposal_fig.png"), dpi = 300);proposal_fig
+  ggsave(file = file.path(draft_figs_dir, "proposal_fig.png"),
+         width = 12, height = 7,dpi = 300);proposal_fig

@@ -177,27 +177,47 @@ ecoregion_trends <- left_join(ecoregions_l321, eco_trends_df, by="us_l3name")# %
 
 
 ecoregion_trends <- ecoregion_trends %>%
-  mutate(sign_fsr = ifelse(mean_fsr_trend_ha_day >0, "Positve", "Negative"),
+  mutate(sign_fsr = ifelse(mean_fsr_trend_ha_day >0, "Positive", "Negative"),
          sig_fsr = ifelse(mean_fsr_p < 0.05, "Significant", "Not Significant"),
          class_fsr = ifelse(sig_fsr == "Significant", sign_fsr,"Not Significant"),
-         sign_mg = ifelse(max_growth_trend_ha >0, "Positve", "Negative"),
+         sign_mg = ifelse(max_growth_trend_ha >0, "Positive", "Negative"),
          sig_mg = ifelse(max_growth_p < 0.05, "Significant", "Not Significant"),
          class_mg = ifelse(sig_mg == "Significant", sign_mg,"Not Significant"),
-         sign_d = ifelse(duration_trend_days >0, "Positve", "Negative"),
+         sign_d = ifelse(duration_trend_days >0, "Positive", "Negative"),
          sig_d = ifelse(duration_p < 0.05, "Significant", "Not Significant"),
-         class_d = ifelse(sig_d == "Significant", sign_d,"Not Significant")
+         class_d = ifelse(sig_d == "Significant", sign_d,"Not Significant"),
+         class_d = ifelse(is.na(class_d), "Insufficient data", class_d) %>%
+           factor(levels = c("Positive", "Not Significant", "Negative",
+                             "Insufficient data")),
+         class_mg = ifelse(is.na(class_mg), "Insufficient data", class_mg) %>%
+           factor(levels = c("Positive", "Not Significant", "Negative",
+                             "Insufficient data")),
+         class_fsr = ifelse(is.na(class_fsr), "Insufficient data", class_fsr) %>%
+           factor(levels = c("Positive", "Not Significant", "Negative",
+                             "Insufficient data"))
   )
+
 
 st_write(ecoregion_trends,"ecoregion_trends_duration_5_or_more.gpkg", delete_dsn = TRUE)
 system(paste0("aws s3 cp ","ecoregion_trends_duration_5_or_more.gpkg ",
               s3_base,
               "/ecoregion_trends_duration_5_or_more.gpkg"))
 
+# messing with doing a cartogram
+# isn't that informative but maybe try with burned area instead of n, and also
+# maybe try aggregating by state
+
+library(cartogram)
+carto <- as(ecoregion_trends, "Spatial") %>%
+  cartogram_cont("n") %>%
+  as("sf")
+
 # plotting
-ggplot() +
+
+pmg<-ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
           aes(fill = class_mg)) +
-  scale_fill_manual(values=c("skyblue", "grey","red"))+
+  scale_fill_manual(values=c("red", "grey","skyblue","white"))+
   labs(size = "# Events", fill= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
@@ -206,10 +226,10 @@ ggplot() +
   ggtitle("Trends in Maximum Single-Day Fire Growth",
           "Fire events longer than 5 days")
 
-ggplot() +
+pfsr<- ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
           aes(fill = class_fsr)) +
-  scale_fill_manual(values=c("skyblue", "grey","red"))+
+  scale_fill_manual(values=c("red", "grey","skyblue","white"))+
   labs(fill= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
@@ -218,10 +238,10 @@ ggplot() +
   ggtitle("Trends in Mean Fire Spread Rate",
           "Fire events longer than 5 days")
 
-ggplot() +
+pd<-ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
           aes(fill = class_d)) +
-  scale_fill_manual(values=c("skyblue", "grey","red"))+
+  scale_fill_manual(values=c("red", "grey","skyblue","white"))+
   labs(fill= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
@@ -229,3 +249,6 @@ ggplot() +
         legend.justification = c(0,0)) +  
   ggtitle("Trends in Fire Duration",
           "Fire events longer than 5 days")
+
+ggarrange(pmg, pfsr, pd, ncol = 1, nrow=3) +
+  ggsave("egregions_3pan.png", height = 18, width = 8.5)

@@ -172,11 +172,9 @@ eco_trends_df<-foreach(i = 1:nrow(ecoregions_l321),.combine=rbind)%dopar%{
   return(xx)
 }
 
-ecoregion_trends <- left_join(ecoregions_l321, eco_trends_df, by="us_l3name") %>%
-  st_centroid()
+ecoregion_trends <- left_join(ecoregions_l321, eco_trends_df, by="us_l3name")# %>%
+  # st_centroid()
 
-st_write(ecoregion_trends,"ecoregion_trends_duration_5_or_more.gpkg")
-system(paste("aws s3 sync","ecoregion_trends_duration_5_or_more.gpkg", s3_base))
 
 ecoregion_trends <- ecoregion_trends %>%
   mutate(sign_fsr = ifelse(mean_fsr_trend_ha_day >0, "Positve", "Negative"),
@@ -190,12 +188,17 @@ ecoregion_trends <- ecoregion_trends %>%
          class_d = ifelse(sig_d == "Significant", sign_d,"Not Significant")
   )
 
+st_write(ecoregion_trends,"ecoregion_trends_duration_5_or_more.gpkg", delete_dsn = TRUE)
+system(paste0("aws s3 cp ","ecoregion_trends_duration_5_or_more.gpkg ",
+              s3_base,
+              "/ecoregion_trends_duration_5_or_more.gpkg"))
+
 # plotting
 ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
-          aes(fill = class_mg), show.legend = "point") +
-  scale_color_manual(values=c("skyblue", "grey","red"))+
-  labs(size = "# Events", color= 'Direction of\nTrend')+
+          aes(fill = class_mg)) +
+  scale_fill_manual(values=c("skyblue", "grey","red"))+
+  labs(size = "# Events", fill= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
         legend.position = c(0.05,0.04),
@@ -205,9 +208,9 @@ ggplot() +
 
 ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
-          aes(fill = class_fsr), show.legend = "point") +
-  scale_color_manual(values=c("skyblue", "grey","red"))+
-  labs(size = "# Events", color= 'Direction of\nTrend')+
+          aes(fill = class_fsr)) +
+  scale_fill_manual(values=c("skyblue", "grey","red"))+
+  labs(fill= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
         legend.position = c(0.05,0.04),
@@ -217,9 +220,9 @@ ggplot() +
 
 ggplot() +
   geom_sf(data = ecoregion_trends, color = "black",
-          aes(fill = class_d), show.legend = "point") +
-  scale_color_manual(values=c("skyblue", "grey","red"))+
-  labs(size = "# Events", color= 'Direction of\nTrend')+
+          aes(fill = class_d)) +
+  scale_fill_manual(values=c("skyblue", "grey","red"))+
+  labs(fill= 'Direction of\nTrend')+
   theme_void() +
   theme(legend.box = "horizontal",
         legend.position = c(0.05,0.04),

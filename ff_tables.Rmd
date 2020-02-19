@@ -1,0 +1,118 @@
+---
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(kableExtra)
+library(sf)
+library(tidyverse)
+modis_events <- st_read("data/fire/modis_events/modis_event_polygons_cus.gpkg") %>%
+  filter(lc_name != "Water Bodies",
+         lc_name != "Barren")
+
+```
+
+# Tables
+
+```{r}
+modis_events %>%
+  st_set_geometry(NULL) %>%
+  na.omit()%>%
+  group_by(l1_ecoregion, lc_name) %>%
+  summarise(max_single_day_growth = max(max_growth_ha) %>% round,
+            median_fsr_ha_day = median(fsr_ha_per_day) %>% round,
+            max_fsr_ha_day = max(fsr_ha_per_day) %>% round,
+            n=n()) %>%
+  filter(n>100) %>%
+    arrange(desc(median_fsr_ha_day)) %>%
+  ungroup() %>%
+  kable(booktabs=TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+modis_events %>%
+  st_set_geometry(NULL) %>%
+  na.omit()%>%
+  group_by(lc_name) %>%
+  summarise(max_single_day_growth_ha = max(max_growth_ha) %>% round,
+            median_fsr_ha_day = median(fsr_ha_per_day) %>% round,
+            max_fsr_ha_day = max(fsr_ha_per_day) %>% round,
+            n=n()) %>%
+  filter(n>100) %>%
+  ungroup() %>%
+  arrange(desc(median_fsr_ha_day)) %>%
+  kable(booktabs=TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+modis_events %>%
+  st_set_geometry(NULL) %>%
+  na.omit()%>%
+  group_by(l1_ecoregion) %>%
+  summarise(max_single_day_growth = max(max_growth_ha) %>% round,
+            median_fsr_ha_day = median(fsr_ha_per_day) %>% round,
+            max_fsr_ha_day = max(fsr_ha_per_day) %>% round,
+            n=n()) %>%
+  filter(n>100) %>%
+  ungroup() %>%
+  arrange(desc(median_fsr_ha_day)) %>%
+  kable(booktabs=TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+
+total <-modis_events %>%
+  st_set_geometry(NULL) %>%
+  summarise(max_growth_sum = sum(max_growth_km2)%>% round(),
+            total_area_sum = sum(total_area_km2)%>% round()) %>%
+  mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round(),
+         lc_name = "Coterminous US",
+         l1_ecoregion = "Coterminous US") 
+
+modis_events %>%
+  st_set_geometry(NULL) %>%
+  group_by(l1_ecoregion, lc_name) %>%
+  summarise(max_growth_sum = sum(max_growth_km2) %>% round(),
+            total_area_sum = sum(total_area_km2) %>% round(),
+            n=n()) %>%
+  ungroup() %>%
+  filter(n>100) %>%
+  dplyr::select(-n) %>%
+  mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round()) %>%
+  arrange(desc(percent_one_day))%>%  
+  filter(!is.na(l1_ecoregion))%>%
+  rbind(total) %>%
+  kable(booktabs=TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+modis_events %>%
+  st_set_geometry(NULL) %>%
+  group_by(lc_name) %>%
+  summarise(max_growth_sum = sum(max_growth_km2) %>% round(),
+            total_area_sum = sum(total_area_km2) %>% round(),
+            n=n()) %>%
+  ungroup() %>%
+  filter(n>100) %>%
+  dplyr::select(-n) %>%
+  mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round()) %>%
+  arrange(desc(percent_one_day))%>%  
+  filter(!is.na(lc_name))%>%
+  rbind(total %>% dplyr::select(-l1_ecoregion)) %>%
+  kable(booktabs=TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+modis_events %>%
+  st_set_geometry(NULL) %>%
+  group_by(l1_ecoregion) %>%
+  summarise(max_growth_sum = sum(max_growth_km2) %>% round(),
+            total_area_sum = sum(total_area_km2) %>% round(),
+            n=n()) %>%
+  ungroup() %>%
+  filter(n>100) %>%
+  dplyr::select(-n) %>%
+  mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round()) %>%
+  arrange(desc(percent_one_day))%>%  
+  filter(!is.na(l1_ecoregion))%>%
+  rbind(total %>% dplyr::select(-lc_name)) %>%
+  kable(booktabs=TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+```

@@ -1,0 +1,13 @@
+---
+output: pdf_document
+---
+
+```{r echo=F}
+library(tidyverse) 
+library(kableExtra)
+
+read_csv("results/ecos_w_red_dots.csv") %>%
+  dplyr::rename("Level 3 Ecoregion" = us_l3name,
+                "# Fires > 10,000 in a single day" = n_fast_fires) %>%
+  kable(booktabs =TRUE, format = "latex")
+```

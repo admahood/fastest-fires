@@ -17,6 +17,13 @@ modis_events <- st_read("data/fire/modis_events/modis_event_polygons_cus.gpkg") 
 # Tables
 
 ```{r}
+read_csv("results/ecos_w_red_dots.csv") %>%
+  dplyr::rename("Level 3 Ecoregion" = us_l3name,
+                "# Fires > 10,000 in a single day" = n_fast_fires) %>%
+  kable(booktabs =TRUE, format = "latex")
+```
+
+```{r}
 modis_events %>%
   st_set_geometry(NULL) %>%
   na.omit()%>%
@@ -26,10 +33,28 @@ modis_events %>%
             max_fsr_ha_day = max(fsr_ha_per_day) %>% round,
             n=n()) %>%
   filter(n>100) %>%
-    arrange(desc(median_fsr_ha_day)) %>%
+   
   ungroup() %>%
+  group_by(l1_ecoregion) %>%
+  mutate(max_f = max(median_fsr_ha_day))%>%
+  ungroup() %>%
+  arrange(desc(max_f),desc(median_fsr_ha_day)) %>%
+  dplyr::select(-max_f,-l1_ecoregion,
+                `Landcover Class` = lc_name,
+                `Median fsr (ha/day)` = median_fsr_ha_day,
+                `Maximum fsr (ha/day)` = max_fsr_ha_day,
+                `Maximum Single Day Growth (ha)` = max_single_day_growth,
+                n) %>%
   kable(booktabs=TRUE) %>%
-  kable_styling(latex_options = "scale_down")
+  kable_styling(latex_options = "scale_down") %>%
+  pack_rows("Southern Semi-Arid Highlands",1,1 ) %>%
+  pack_rows("North American Deserts",2,4 ) %>%
+  pack_rows( "Mediterranean California",5,6) %>%
+  pack_rows("Temperate Sierras",7,7 ) %>%
+  pack_rows( "Great Plains",8,10) %>%
+  pack_rows( "Northwestern Forested Mountains",11,15) %>%
+  pack_rows( "Eastern Temperate Forests",16,23) %>%
+  pack_rows( "Tropical Wet Forests",24,26)
 
 modis_events %>%
   st_set_geometry(NULL) %>%
@@ -59,13 +84,15 @@ modis_events %>%
   kable(booktabs=TRUE) %>%
   kable_styling(latex_options = "scale_down")
 
+```
 
+```{r}
 total <-modis_events %>%
   st_set_geometry(NULL) %>%
   summarise(max_growth_sum = sum(max_growth_km2)%>% round(),
             total_area_sum = sum(total_area_km2)%>% round()) %>%
   mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round(),
-         lc_name = "Coterminous US",
+         lc_name = "All Landcover Types",
          l1_ecoregion = "Coterminous US") 
 
 modis_events %>%
@@ -76,13 +103,34 @@ modis_events %>%
             n=n()) %>%
   ungroup() %>%
   filter(n>100) %>%
-  dplyr::select(-n) %>%
   mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round()) %>%
-  arrange(desc(percent_one_day))%>%  
+  group_by(l1_ecoregion)%>%
+  mutate(max1 = max(percent_one_day)) %>%
+  ungroup()%>%
+  arrange(desc(max1),desc(l1_ecoregion),desc(percent_one_day))%>%  
   filter(!is.na(l1_ecoregion))%>%
+    dplyr::select(-n,-max1) %>%
   rbind(total) %>%
+  dplyr::select(-l1_ecoregion,
+                  `Landcover Class` = lc_name,
+                  `Area Burned in Single Day (ha)` = max_growth_sum,
+                  `Total Area Burned (ha)` = total_area_sum,
+                  `% Area Burned in Single Day` = percent_one_day)%>%
   kable(booktabs=TRUE) %>%
-  kable_styling(latex_options = "scale_down")
+  kable_styling(latex_options = "scale_down") %>%
+  pack_rows("North American Deserts",1,3) %>%
+  pack_rows("Great Plains",4,6) %>%
+  pack_rows("Mediterranean California", 7,8) %>%
+  pack_rows("Eastern Temperate Forests",9,16) %>%
+  pack_rows("Northwestern Forested Mountains",17,21) %>%
+  pack_rows("Temperate Sierras",22,22) %>%
+  pack_rows("Tropical Wet Forests", 23,25) %>%
+  pack_rows("Southern Semi-Arid Highlands",26,26) %>%
+  pack_rows("Coterminous U.S.", 27,27)
+
+```
+
+```{r}
 
 modis_events %>%
   st_set_geometry(NULL) %>%
@@ -92,9 +140,9 @@ modis_events %>%
             n=n()) %>%
   ungroup() %>%
   filter(n>100) %>%
-  dplyr::select(-n) %>%
   mutate(percent_one_day = (max_growth_sum/total_area_sum*100)%>% round()) %>%
-  arrange(desc(percent_one_day))%>%  
+  arrange(desc(percent_one_day))%>% 
+    dplyr::select(-n) %>%
   filter(!is.na(lc_name))%>%
   rbind(total %>% dplyr::select(-l1_ecoregion)) %>%
   kable(booktabs=TRUE) %>%

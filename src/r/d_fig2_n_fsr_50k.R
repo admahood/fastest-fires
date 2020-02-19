@@ -33,6 +33,17 @@ classify_max_max_fsr <-  function(x) {
                               "> 10,000"))))
 }
 
+
+helper_function<- function(x) {
+  # thanks http://rpubs.com/sogletr/sf-ops
+  if (length(x) == 1) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+
 # converting modis_events into centroids ---------------------------------------
 modis_fish <- fishnet_50k %>%
   st_intersection(., st_centroid(
@@ -119,3 +130,33 @@ proposal_fig <- modis_fish_ff %>%
   # guides(col=guide_legend())+
   ggsave(file = file.path(draft_figs_dir, "proposal_fig.png"),
          width = 12, height = 7,dpi = 300);proposal_fig
+
+
+# which ecoregions have red dots? ==============================================
+ecos3 <- st_read("data/bounds/ecoregions/us_eco_l3/us_eco_l321.gpkg") %>%
+  st_transform(crs = st_crs(modis_fish_ff))
+red_dots <- modis_fish_ff %>%
+  st_as_sf(coords = c("long", "lat")) %>%
+  filter(max_max_growth > 10000) %>%
+  st_transform(crs=st_crs(ecos3)) 
+
+x1<-st_intersects(ecos3, red_dots,sparse = F) %>%
+  rowSums()
+
+ecos3 <- ecos3 %>%
+  mutate(n_fast_fires = x1)
+
+ecos_w_red_dots <- ecos3 %>%
+  filter(n_fast_fires >0)
+
+
+ggplot() +
+  geom_sf(data = ecos_w_red_dots) +
+  geom_sf(data = red_dots, col = "red") +
+  theme_void()
+
+ecos_w_red_dots %>%
+  dplyr::select(us_l3name, n_fast_fires)%>%
+  st_set_geometry(NULL) %>%
+  arrange(desc(n_fast_fires)) %>%
+  write_csv("results/ecos_w_red_dots.csv")
